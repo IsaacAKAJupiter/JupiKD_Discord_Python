@@ -3,7 +3,7 @@ from discord.ext import commands
 
 import sys, traceback, aiohttp
 
-import config, functions
+import config, functions, databasefunctions
 
 async def get_prefix(bot, message):
     prefixes = ["^"]
@@ -11,22 +11,9 @@ async def get_prefix(bot, message):
     if not message.guild:
         return "jupikd_privatemessage"
 
-    try:
-        url = "http://jups.xyz/API/jupikd_discord/getguildprefix.php"
-        params = {
-            "key": config.jupsapikey,
-            "serverid": message.guild.id
-        }
-        async with aiohttp.ClientSession() as session:
-            async with session.post(url=url, data=params) as resp:
-                jsonURL = await resp.json()
-                session.close()
-
-        if jsonURL["success"] == True:
-            return commands.when_mentioned_or(jsonURL["prefix"])(bot, message)
-
-    except Exception:
-        pass
+    prefix = await functions.GetGuildPrefix(message.guild.id)
+    if prefix != None:
+        return commands.when_mentioned_or(prefix)(bot, message)
 
     return commands.when_mentioned_or(*prefixes)(bot, message)
 
@@ -47,7 +34,7 @@ if __name__ in "__main__":
 
 @bot.event
 async def on_ready():
-    game = discord.Game(name="^help | twitch.tv/jups | jups.xyz")
+    game = discord.Game(name="^help | jups.xyz")
     await bot.change_presence(status=discord.Status.online, activity=game)
     print("Bot Online!")
     print(f"Discord.py Version: {discord.__version__}")
@@ -55,6 +42,28 @@ async def on_ready():
     print(f"Commands Loaded: {len(bot.commands)}")
     print(f"Bot Name: {bot.user.name}")
     print(f"Bot ID: {bot.user.id}")
+
+    guilds = []
+    for guild in bot.guilds:
+        guilds.append(guild.id)
+        await functions.CheckAndAddGuild(guild)
+
+    await functions.DeleteAllRemovedGuilds(guilds)
+
+@bot.event
+async def on_guild_join(guild):
+    await functions.CheckAndAddGuild(guild)
+
+@bot.event
+async def on_guild_remove(guild):
+    await functions.DeleteGuild(guild)
+
+@bot.event
+async def on_guild_update(guild_before, guild_after):
+    if guild_before.name != guild_after.name:
+        await databasefunctions.UpdateDatabase(guild_after, "server", "name", add=True, new_value=guild_after.name, old_value=guild_before.name)
+
+    #TODO: Use this to check if someone deleted the twitter webhook. await guild.webhooks()
 
 @bot.event
 async def on_message(message):

@@ -1,7 +1,8 @@
 import discord
 from discord.ext import commands
 
-import os, sys, pathlib
+import os, sys, pathlib, aiohttp
+import functions, config
 
 class OwnerCog:
 
@@ -104,12 +105,56 @@ class OwnerCog:
         else:
             await ctx.send("Successfully loaded all the cogs.")
 
-    #WIP
-    #@commands.command(hidden=True)
-    #@commands.is_owner()
-    #async def restart(self, ctx):
-    #    main_bot_folder = pathlib.Path(__file__).parent.parent.name
-    #    os.execl(main_bot_folder + "/bot.py", *sys.argv)
+    @commands.command(hidden=True)
+    @commands.is_owner()
+    async def addcommand(self, ctx, name, permission):
+        """Command which adds a new command into the database."""
+
+        url = "http://localhost/API/jupikd_discord/createdefaultcommand.php"
+        params = {
+            "key": config.jupsapikey,
+            "name": name,
+            "permission": permission
+        }
+        jsonURL = await functions.PostRequest(url, params)
+        if jsonURL != None and jsonURL["success"] == True:
+            await ctx.send("Added command.")
+        else:
+            await ctx.send("Failed adding command.")
+
+    @commands.command(hidden=True)
+    @commands.is_owner()
+    async def deletecommand(self, ctx, name):
+        """Command which deletes a command from the database."""
+
+        url = "http://localhost/API/jupikd_discord/deletedefaultcommand.php"
+        params = {
+            "key": config.jupsapikey,
+            "name": name
+        }
+        jsonURL = await functions.PostRequest(url, params)
+        if jsonURL != None and jsonURL["success"] == True:
+            await ctx.send("Removed command.")
+        else:
+            await ctx.send("Failed removing command.")
+
+    @commands.command(hidden=True)
+    @commands.is_owner()
+    async def editcommand(self, ctx, name, row, new_value):
+        """Command which edits a command in the database."""
+
+        url = "http://localhost/API/jupikd_discord/updatedefaultcommand.php"
+        params = {
+            "key": config.jupsapikey,
+            "name": name,
+            "row": row, 
+            "new_value": new_value
+        }
+        jsonURL = await functions.PostRequest(url, params)
+        if jsonURL != None and jsonURL["success"] == True:
+            await ctx.send("Edited command.")
+        else:
+            await ctx.send("Failed editing command.")
 
 def setup(bot):
     bot.add_cog(OwnerCog(bot))
