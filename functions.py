@@ -1,4 +1,4 @@
-import os, aiohttp, requests
+import os, aiohttp, requests, discord
 
 import config, databasefunctions
 
@@ -109,6 +109,63 @@ async def DeleteAllRemovedGuilds(guilds):
         if guild["server_id"] not in guilds:
             await DeleteGuildFromID(guild["server_id"])
 
+#This function will return an embed with the default settings.
+async def CreateEmbed(title = None, description = None, footer = None, image = None, thumbnail = None, url = None, author = None):
+    embed = discord.Embed()
+    embed.colour = 0xf1c40f
+
+    #Check if the other parameters are None, and if not, set.
+    if title != None:
+        embed.title = title
+
+    if description != None:
+        embed.description = description
+
+    if footer != None:
+        embed.set_footer(text=footer[0], icon_url=footer[1])
+
+    if image != None:
+        embed.set_image(url=image)
+    
+    if thumbnail != None:
+        embed.set_thumbnail(url=thumbnail)
+    
+    if url != None:
+        embed.url = url
+
+    if author != None:
+        embed.set_author(name=author[0], url=author[1], icon_url=author[2])
+
+    #Return the final embed.
+    return embed
+
+#This function will return the member objects for mods, admins or the owner.
+async def GetMemberObjects(guild, column):
+    server = await GetGuildInfo(guild, "server")
+
+    #Get the right column and make sure it's not None/empty.
+    #Split into list, loop through list and return all the member objects.
+    if server != None and (server[0][column] != None or server[0][column] != ""):
+        id_list = server[0][column].split(",")
+        members = []
+        for member in id_list:
+            members.append(guild.get_member(int(member)))
+
+        return members
+
+#This function adds to the usage of a command in the database.
+async def AddUseToCommand(ctx):
+    url = "http://localhost/API/jupikd_discord/incrementusagedefaultcommands.php"
+    params = {
+        "key": config.jupsapikey,
+        "name": ctx.command.name
+    }
+    jsonURL = await PostRequest(url, params)
+    if jsonURL != None and jsonURL["success"] == True:
+        return True
+    else:
+        return False
+
 #This function checks if a member has a specific permission.
 async def CheckPermission(guild, member_id, permission):
     #Check if the permission was one of the main permissions (member, mod, admin, owner).
@@ -139,31 +196,33 @@ async def CheckPermission(guild, member_id, permission):
     return False
 
 #This function checks if the member has permission to use a command.
-async def MemberPermCommandCheck(guild, member_id, command):
+async def MemberPermCommandCheck(ctx):
     #If the member is the bot owner or the guild owner, return True.
-    if member_id == guild.owner.id or member_id == config.bot_owner:
+    if ctx.author.id == ctx.guild.owner.id or ctx.author.id == config.bot_owner:
         return True
 
+    permission = await GetPermissionForCommand(ctx, ctx.command.name)
+    if permission != None:
+        check = await CheckPermission(ctx.guild, ctx.author.id, permission)
+        if check == True:
+            return True
+        else:
+            return False
+
+#This function gets the permission for a command.
+async def GetPermissionForCommand(ctx, command):
     #Check if the guild modified the permission for the command.
-    json = await GetGuildInfo(guild, "server_default_command_permissions")
+    json = await GetGuildInfo(ctx.guild, "server_default_command_permissions")
     if json != None:
         for i in json:
             if i["name"] == command:
-                check = await CheckPermission(guild, member_id, i["permission"])
-                if check == True:
-                    return True
-                else:
-                    return False
+                return i["permission"]
 
     #If they didn't modify, check default command permissions.
     json = await GetDefaultCommandPermissions()
     for i in json:
         if i["name"] == command:
-            check = await CheckPermission(guild, member_id, i["permission"])
-            if check == True:
-                return True
-            else:
-                return False
+            return i["permission"]
      
 #This function checks if a message includes a blacklisted word.
 async def CheckIfBlacklistedWord(message):

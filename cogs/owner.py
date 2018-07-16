@@ -105,7 +105,7 @@ class OwnerCog:
         else:
             await ctx.send("Successfully loaded all the cogs.")
 
-    @commands.command(hidden=True)
+    @commands.command(hidden=True, aliases=["createcommand"])
     @commands.is_owner()
     async def addcommand(self, ctx, name, permission):
         """Command which adds a new command into the database."""
@@ -122,7 +122,7 @@ class OwnerCog:
         else:
             await ctx.send("Failed adding command.")
 
-    @commands.command(hidden=True)
+    @commands.command(hidden=True, aliases=["removecommand"])
     @commands.is_owner()
     async def deletecommand(self, ctx, name):
         """Command which deletes a command from the database."""
@@ -155,6 +155,35 @@ class OwnerCog:
             await ctx.send("Edited command.")
         else:
             await ctx.send("Failed editing command.")
+
+    @commands.command(hidden=True, aliases=["presence"])
+    @commands.is_owner()
+    async def status(self, ctx, *, newstatus):
+        """Command which changes the bot's presence."""
+       
+        game = discord.Game(name=newstatus)
+        await self.bot.change_presence(status=discord.Status.online, activity=game)
+        await ctx.send(f"New status: \"{newstatus}\".")
+
+    @commands.command(hidden=True, aliases=["announce"])
+    @commands.is_owner()
+    async def announcement(self, ctx, *, announcement):
+        """Command which sends an announcement."""
+
+        for guild in self.bot.guilds:
+            for channel in guild.channels:
+                if channel.name == "bot_commands" or channel.name == "bot-commands" or channel.name == "botcommands":
+                    if type(channel) == discord.channel.TextChannel:
+                        embed = await functions.CreateEmbed(
+                            title="Announcement",
+                            description="This is an announcement from the bot owner. (only sent to channels named bot_commands, bot-commands or botcommands)",
+                            author=(self.bot.user.display_name, discord.Embed.Empty, self.bot.user.avatar_url_as(format="png"))
+                        )
+                        embed.add_field(name="Actual Announcement", value=announcement)
+                        await channel.send(embed=embed)
+
+        await ctx.send("Sent announcement channel to all channels named either bot_commands, bot-commands or botcommands")
+
 
 def setup(bot):
     bot.add_cog(OwnerCog(bot))

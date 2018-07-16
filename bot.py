@@ -1,19 +1,19 @@
 import discord
 from discord.ext import commands
 
-import sys, traceback, aiohttp
+import sys, traceback, aiohttp, datetime
 
 import config, functions, databasefunctions
+
+start_time = 0
 
 async def get_prefix(bot, message):
     prefixes = ["^"]
 
-    if not message.guild:
-        return "jupikd_privatemessage"
-
-    prefix = await functions.GetGuildPrefix(message.guild.id)
-    if prefix != None:
-        return commands.when_mentioned_or(prefix)(bot, message)
+    if message.guild:
+        prefix = await functions.GetGuildPrefix(message.guild.id)
+        if prefix != None:
+            return commands.when_mentioned_or(prefix)(bot, message)
 
     return commands.when_mentioned_or(*prefixes)(bot, message)
 
@@ -32,6 +32,10 @@ if __name__ in "__main__":
             print(f"Failed to load extension {extension}. Error: {e}.", file=sys.stderr)
             traceback.print_exc()
 
+@bot.check
+async def block_dms(ctx):
+    return ctx.guild != None
+
 @bot.event
 async def on_ready():
     game = discord.Game(name="^help | jups.xyz")
@@ -42,6 +46,8 @@ async def on_ready():
     print(f"Commands Loaded: {len(bot.commands)}")
     print(f"Bot Name: {bot.user.name}")
     print(f"Bot ID: {bot.user.id}")
+
+    config.start_time = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 
     guilds = []
     for guild in bot.guilds:
@@ -76,6 +82,12 @@ async def on_message(message):
     await bot.process_commands(message)
 
 @bot.event
+async def on_command_completion(ctx):
+    if ctx.command.cog_name != "OwnerCog" and ctx.command.cog_name != None:
+        if await functions.AddUseToCommand(ctx) == False:
+            print(f"ERROR: Adding use to Command | Command used: {ctx.command.name}")
+
+@bot.event
 async def on_member_remove(member):
     remove_message, channel = await functions.OnMemberRemoveCheck(member)
     if remove_message != None and channel != None:
@@ -91,7 +103,9 @@ async def on_member_join(member):
 
 @bot.event
 async def on_command_error(ctx, error):
-    if not isinstance(error, commands.CommandNotFound):
+    if not isinstance(error, commands.CommandNotFound) and not isinstance(error, commands.CheckFailure):
         await ctx.send(f"An error was raised: \"{error}\" | Used command: \"{ctx.message.content}\" | User: {ctx.author.mention}")
+    elif isinstance(error, commands.CheckFailure):
+        await ctx.send("You do not have permission.")
 
 bot.run(config.token, bot=True, reconnect=True)
