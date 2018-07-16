@@ -5,8 +5,6 @@ import sys, traceback, aiohttp, datetime
 
 import config, functions, databasefunctions
 
-start_time = 0
-
 async def get_prefix(bot, message):
     prefixes = ["^"]
 
