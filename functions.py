@@ -76,6 +76,43 @@ async def CheckAndAddGuild(guild):
     }
     await PostRequest(url, params)
 
+#This function checks and adds commands in/to the database.
+#Similar to the CheckAndAddGuild function.
+async def CheckAndAddCommand(command):
+    #Split description and permission since permission isn't an actual thing in discord.py.
+    desc_permission = command.help.split(" jupikdsplit->")
+
+    #Get all the parameters. Check if they have any then turn into a string.
+    params = ""
+    if command.clean_params:
+        params = command.name
+        for param, _ in sorted(command.clean_params.items()):
+            params += f" [{param}] "
+
+        params = params[:-1]
+    else:
+        params = command.name
+    
+    #Turn the aliases list into a string to send to API.
+    aliases = ""
+    for i in command.aliases:
+        aliases += f"{i}, "
+
+    #Get rid of the last comma.
+    aliases = aliases[:-2]
+
+    url = "http://localhost/API/jupikd_discord/addcommandtodatabase.php"
+    params = {
+        "key": config.jupsapikey,
+        "name": command.name,
+        "description": desc_permission[0],
+        "usage": params,
+        "permission": desc_permission[1],
+        "category": command.cog_name,
+        "aliases": aliases
+    }
+    await PostRequest(url, params)
+
 #This function deletes the guild from the database.
 async def DeleteGuild(guild):
     url = "http://localhost/API/jupikd_discord/removeguildfromdatabase.php"
@@ -139,6 +176,28 @@ async def CreateEmbed(title = None, description = None, footer = None, image = N
     #Return the final embed.
     return embed
 
+#This function will look for a member based on a name and return the closest member.
+async def GetMemberByName(guild, name):
+    #Loop through members in the guild.
+    #Check if the name is in members name or nickname (in because should work without full name.)
+    for member in guild.members:
+        if member.nick != None:
+            if name.lower() in member.name.lower() or name.lower() in member.nick.lower():
+                return member
+        else:
+            if name.lower() in member.name.lower():
+                return member
+    
+    return None
+
+#This function will get the latest message from a member that isn't an embed.
+async def MemberLatestMessage(channel, member):
+    #Loop through 100 messages in the channel.
+    #Return message object that doesn't have an embed.
+    async for m in channel.history(limit=100):
+        if m.author == member and len(m.embeds) < 1:
+            return m
+
 #This function will return the member objects for mods, admins or the owner.
 async def GetMemberObjects(guild, column):
     server = await GetGuildInfo(guild, "server")
@@ -174,12 +233,14 @@ async def CheckPermission(guild, member_id, permission):
         return True
 
     elif permission == "Mod":
-        if str(member_id) in json[0]["moderators"]:
-            return True
+        if json[0]["moderators"] != None:
+            if str(member_id) in json[0]["moderators"]:
+                return True
 
     elif permission == "Admin":
-        if str(member_id) in json[0]["admins"]:
-            return True
+        if json[0]["admins"] != None:
+            if str(member_id) in json[0]["admins"]:
+                return True
 
     elif permission == "Owner":
         if member_id == json[0]["owner"]:
@@ -191,8 +252,9 @@ async def CheckPermission(guild, member_id, permission):
         if json != None and json != "":
             for i in json:
                 if i["name"] == permission:
-                    if str(member_id) in i["users"]:
-                        return True
+                    if i["users"] != None:
+                        if str(member_id) in i["users"]:
+                            return True
     return False
 
 #This function checks if the member has permission to use a command.

@@ -33,6 +33,9 @@ class OwnerCog:
             await ctx.send(f"Error unloading the cog: {cog}.")
             await ctx.send(e)
         else:
+            for command in self.bot.commands:
+                if command.cog_name != None and command.cog_name != "OwnerCog":
+                    await functions.CheckAndAddCommand(command)
             await ctx.send(f"Successfully unloaded the cog: {cog}.")
 
     @commands.command(hidden=True)
@@ -47,6 +50,9 @@ class OwnerCog:
             await ctx.send(f"Error reloading the cog: {cog}.")
             await ctx.send(e)
         else:
+            for command in self.bot.commands:
+                if command.cog_name != None and command.cog_name != "OwnerCog":
+                    await functions.CheckAndAddCommand(command)
             await ctx.send(f"Successfully reloaded the cog: {cog}.")
 
     @commands.command(hidden=True, aliases=["re"])
@@ -61,6 +67,10 @@ class OwnerCog:
                 new_i = i.replace(".py", "")
                 self.bot.unload_extension(f"{cogs_dir}.{new_i}")
                 self.bot.load_extension(f"{cogs_dir}.{new_i}")
+            
+            for command in self.bot.commands:
+                if command.cog_name != None and command.cog_name != "OwnerCog":
+                    await functions.CheckAndAddCommand(command)
         except Exception as e:
             print(f"error: {e}")
             await ctx.send(e)
@@ -99,62 +109,15 @@ class OwnerCog:
             for i in list_of_cogs:
                 new_i = i.replace(".py", "")
                 self.bot.load_extension(f"{cogs_dir}.{new_i}")
+
+            for command in self.bot.commands:
+                if command.cog_name != None and command.cog_name != "OwnerCog":
+                    await functions.CheckAndAddCommand(command)
         except Exception as e:
             await ctx.send("Error loading all the cogs.")
             await ctx.send(e)
         else:
             await ctx.send("Successfully loaded all the cogs.")
-
-    @commands.command(hidden=True, aliases=["createcommand"])
-    @commands.is_owner()
-    async def addcommand(self, ctx, name, permission):
-        """Command which adds a new command into the database."""
-
-        url = "http://localhost/API/jupikd_discord/createdefaultcommand.php"
-        params = {
-            "key": config.jupsapikey,
-            "name": name,
-            "permission": permission
-        }
-        jsonURL = await functions.PostRequest(url, params)
-        if jsonURL != None and jsonURL["success"] == True:
-            await ctx.send("Added command.")
-        else:
-            await ctx.send("Failed adding command.")
-
-    @commands.command(hidden=True, aliases=["removecommand"])
-    @commands.is_owner()
-    async def deletecommand(self, ctx, name):
-        """Command which deletes a command from the database."""
-
-        url = "http://localhost/API/jupikd_discord/deletedefaultcommand.php"
-        params = {
-            "key": config.jupsapikey,
-            "name": name
-        }
-        jsonURL = await functions.PostRequest(url, params)
-        if jsonURL != None and jsonURL["success"] == True:
-            await ctx.send("Removed command.")
-        else:
-            await ctx.send("Failed removing command.")
-
-    @commands.command(hidden=True)
-    @commands.is_owner()
-    async def editcommand(self, ctx, name, row, new_value):
-        """Command which edits a command in the database."""
-
-        url = "http://localhost/API/jupikd_discord/updatedefaultcommand.php"
-        params = {
-            "key": config.jupsapikey,
-            "name": name,
-            "row": row, 
-            "new_value": new_value
-        }
-        jsonURL = await functions.PostRequest(url, params)
-        if jsonURL != None and jsonURL["success"] == True:
-            await ctx.send("Edited command.")
-        else:
-            await ctx.send("Failed editing command.")
 
     @commands.command(hidden=True, aliases=["presence"])
     @commands.is_owner()

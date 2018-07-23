@@ -17,7 +17,10 @@ async def get_prefix(bot, message):
 
 initial_extensions = [
     "cogs.owner",
-    "cogs.general"
+    "cogs.general",
+    "cogs.guildowner",
+    "cogs.funcommands",
+    "cogs.util"
 ]
 
 bot = commands.Bot(command_prefix=get_prefix, description="JupiKD, all purpose Discord bot. Created by: Isaac™#1240")
@@ -47,12 +50,18 @@ async def on_ready():
 
     config.start_time = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 
+    #Check to see if the guilds are in the database, and remove all the left guilds in the database.
     guilds = []
     for guild in bot.guilds:
         guilds.append(guild.id)
         await functions.CheckAndAddGuild(guild)
 
     await functions.DeleteAllRemovedGuilds(guilds)
+
+    #Check to see if the commands are in the database.
+    for command in bot.commands:
+        if not command.cog_name == None and not command.cog_name == "OwnerCog":
+            await functions.CheckAndAddCommand(command)
 
 @bot.event
 async def on_guild_join(guild):
@@ -73,7 +82,7 @@ async def on_guild_update(guild_before, guild_after):
 async def on_message(message):
     if message.webhook_id == None:
         if isinstance(message.channel, discord.TextChannel):
-            if await functions.CheckIfBlacklistedWord(message) == True:
+            if await functions.CheckIfBlacklistedWord(message) == True and message.author != bot.user:
                 await message.delete()
                 return
 
@@ -104,6 +113,11 @@ async def on_command_error(ctx, error):
     if not isinstance(error, commands.CommandNotFound) and not isinstance(error, commands.CheckFailure):
         await ctx.send(f"An error was raised: \"{error}\" | Used command: \"{ctx.message.content}\" | User: {ctx.author.mention}")
     elif isinstance(error, commands.CheckFailure):
+        for i in ctx.command.checks:
+            if (i.__qualname__) == "is_nsfw.<locals>.pred":
+                await ctx.send("You cannot use NSFW commands in a non-NSFW channel.")
+                return
+        
         await ctx.send("You do not have permission.")
 
 bot.run(config.token, bot=True, reconnect=True)
