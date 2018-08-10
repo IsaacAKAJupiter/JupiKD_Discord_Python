@@ -20,7 +20,10 @@ initial_extensions = [
     "cogs.general",
     "cogs.guildowner",
     "cogs.funcommands",
-    "cogs.util"
+    "cogs.util",
+    "cogs.admin",
+    "cogs.mod",
+    "cogs.image"
 ]
 
 bot = commands.Bot(command_prefix=get_prefix, description="JupiKD, all purpose Discord bot. Created by: Isaac™#1240")
@@ -48,7 +51,16 @@ async def on_ready():
     print(f"Bot Name: {bot.user.name}")
     print(f"Bot ID: {bot.user.id}")
 
-    config.start_time = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    #Update the database to store the bots startup time.
+    url = "http://localhost/API/jupikd_discord/updatebotuptime.php"
+    params = {
+        "key": config.jupsapikey,
+        "uptime": datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    }
+    jsonURL = await functions.PostRequest(url, params)
+
+    if jsonURL == None or jsonURL["success"] == False:
+        print("WARNING: Bot Uptime failed.")
 
     #Check to see if the guilds are in the database, and remove all the left guilds in the database.
     guilds = []
@@ -96,7 +108,11 @@ async def on_command_completion(ctx):
 
 @bot.event
 async def on_member_remove(member):
-    remove_message, channel = await functions.OnMemberRemoveCheck(member)
+    #Get the user object to also pass to the function.
+    user = bot.get_user(member.id)
+
+    #Call the function to get the channel and message for the member leaving.
+    remove_message, channel = await functions.OnMemberRemoveCheck(member, user)
     if remove_message != None and channel != None:
         channel = member.guild.get_channel(channel)
         await channel.send(remove_message)

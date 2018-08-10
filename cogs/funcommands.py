@@ -1,7 +1,7 @@
 import discord
 from discord.ext import commands
 
-import aiohttp
+import aiohttp, random
 
 import functions, config, databasefunctions
 
@@ -12,7 +12,7 @@ class FunCommands():
     @commands.cooldown(1, 10, commands.BucketType.user)
     @commands.check(functions.MemberPermCommandCheck)
     @commands.command(aliases=["ud"])
-    async def urbandictionary(self, ctx, word):
+    async def urbandictionary(self, ctx, *, word):
         """Command which searches up a definition on UrbanDictionary. jupikdsplit->Member"""
 
         #Use the urbandictionary API and search the word the member specified.
@@ -91,6 +91,8 @@ class FunCommands():
                 regional_text_string += ":grey_question:"
             elif letter == "!":
                 regional_text_string += ":grey_exclamation:"
+            elif letter == " ":
+                regional_text_string += "  "
             else:
                 regional_text_string += letter
 

@@ -1,4 +1,6 @@
-import os, aiohttp, requests, discord
+import os, aiohttp, requests, discord, io
+
+from PIL import Image, ImageFilter
 
 import config, databasefunctions
 
@@ -145,6 +147,31 @@ async def DeleteAllRemovedGuilds(guilds):
     for guild in databaseguilds:
         if guild["server_id"] not in guilds:
             await DeleteGuildFromID(guild["server_id"])
+
+#This function will deal with the template image manipulation commands.
+async def TemplateImageManipulate(ctx, image, width, height, x, y, path):
+    #Check if there is an attachment and if there is then save it to disk.
+    #If there isn't check if the member sent an image link.
+    if len(ctx.message.attachments) > 0:
+        if ctx.message.attachments[0].height != None and ctx.message.attachments[0].width != None:
+            await ctx.message.attachments[0].save(f"../../JupiKD_Discord_Python/images/{ctx.author.id}-{ctx.message.id}.png")
+            image = Image.open(f"../../JupiKD_Discord_Python/images/{ctx.author.id}-{ctx.message.id}.png")
+        else:
+            await ctx.send("The attachment you have sent is not an image file.")
+            return False
+    else:
+        image = await ImageRequest(image)
+        if image == None:
+            await ctx.send("You didn't send an image attachment and your link was either blank or not a link to an image.")
+            return False
+    
+    #Crop the new image onto the template.
+    bottom_image = Image.open(f"../../JupiKD_Discord_Python/images/{path}.png")
+    image = image.resize((width, height))
+    bottom_image.paste(image, (x, y))
+    bottom_image.save(f"../../JupiKD_Discord_Python/images/{ctx.author.id}-{ctx.message.id}.png")
+
+    return True
 
 #This function will return an embed with the default settings.
 async def CreateEmbed(title = None, description = None, footer = None, image = None, thumbnail = None, url = None, author = None):
@@ -308,15 +335,22 @@ async def CheckIfBlacklistedWord(message):
     return False
 
 #This function deals with when a member gets removed a guild. (removes permissions, check for leave message)
-async def OnMemberRemoveCheck(member):
+async def OnMemberRemoveCheck(member, user):
     #Check if the user was either a mod or an admin. Then remove them.
     if await CheckPermission(member.guild, member.id, "Mod"):
-        #TODO: Update Database Table
+        await databasefunctions.UpdateDatabase(member.guild, "server", "moderators", add=False, new_value=member.id, old_value=None)
         print(f"Member: {member.name} was a mod.")
 
     if await CheckPermission(member.guild, member.id, "Admin"):
-        #TODO: Update Database Table
+        await databasefunctions.UpdateDatabase(member.guild, "server", "admins", add=False, new_value=member.id, old_value=None)
         print(f"Member: {member.name} was an admin.")
+
+    #Check if the user object was None when passed, then return.
+    if user == None:
+        return None, None
+
+    #Get the user's name and descriminator to pass to the f string.
+    user_replace = f"__{user.name}#{user.discriminator}__" 
 
     #Get the table from the database (just the specific guild entries).
     #Make sure the variable isn't None/empty, then check through each custom permission.
@@ -325,9 +359,10 @@ async def OnMemberRemoveCheck(member):
         for i in custom_permissions:
             name = i["name"]
             #Check if the member has the permission. Then update the database.
-            if str(member.id) in i["users"]:
-                #TODO: Update Database Table
-                print(f"Member: {member.name} was in the custom permission: {name}.")
+            if i["users"] != None:
+                if str(member.id) in i["users"]:
+                    await databasefunctions.UpdateCustomPermission(member.guild, name, "users", add=False, old_value=None, new_value=member.id)
+                    print(f"Member: {member.name} was in the custom permission: {name}.")
 
     #Get the table from the database (just the specific guild entries).
     #Make sure the variable isn't None/empty.
@@ -340,8 +375,8 @@ async def OnMemberRemoveCheck(member):
                     #After checks for None/empty and making sure it's enabled, get the leave message.
                     #Replace dynamic message options to work correctly, then return the message and channel.
                     leave_message = join_leave_messages[0]["leave_message"]
-                    leave_message = leave_message.replace(f"{{user}}", member.mention)
-                    leave_message = leave_message.replace(f"{{member}}", member.mention)
+                    leave_message = leave_message.replace(f"{{user}}", user_replace)
+                    leave_message = leave_message.replace(f"{{member}}", user_replace)
                     leave_message = leave_message.replace(f"{{usercount}}", str(len(member.guild.members)))
                     leave_message = leave_message.replace(f"{{membercount}}", str(len(member.guild.members)))
                     return leave_message, join_leave_messages[0]["leave_channel"]
@@ -394,6 +429,7 @@ async def GetRequest(url, params):
     try:
         async with aiohttp.ClientSession() as session:
             async with session.get(url=url, params=params) as resp:
+                print(resp)
                 jsonURL = await resp.json()
                 session.close()
 
@@ -407,4 +443,13 @@ async def GetRequest(url, params):
     #Catch exception, print, and return None.
     except Exception as e:
         print(f"Error: {e}")
+        return None
+
+async def ImageRequest(url):
+    try:
+        async with aiohttp.ClientSession() as session:
+            async with session.get(url=url) as resp:
+                return Image.open(io.BytesIO(await resp.read()))
+                session.close()
+    except Exception:
         return None

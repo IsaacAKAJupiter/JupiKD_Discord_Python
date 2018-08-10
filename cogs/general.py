@@ -147,10 +147,13 @@ class GeneralCommands():
     async def botinfo(self, ctx):
         """Command which displays information about the bot. jupikdsplit->Member"""
 
-        #TODO: Uptime needs to be fixed, since it resets after 24h.
-        #This gets the start time from the config, then gets the difference between the time the command was used to that.
-        start_time = datetime.datetime.strptime(config.start_time, "%Y-%m-%d %H:%M:%S")
-        uptime = (datetime.datetime.now()) - start_time
+        #This gets the start time from the database, then gets the difference between the time the command was used to that.
+        url = "http://localhost/API/jupikd_discord/getuptime.php"
+        params = {"key": config.jupsapikey}
+        jsonURL = await functions.PostRequest(url, params)
+        if jsonURL != None:
+            start_time = datetime.datetime.strptime(jsonURL["uptime"], "%Y-%m-%d %H:%M:%S")
+            uptime = (datetime.datetime.now()) - start_time
 
         #Get the non-owner commands so it's more accurate for users to see how many commands.
         non_owner_commands = [command for command in self.bot.commands if command.cog_name != "OwnerCog" and command.cog_name != None]
