@@ -252,6 +252,15 @@ async def AddUseToCommand(ctx):
     else:
         return False
 
+#This function returns the song queue for a guild.
+async def GetSongQueue(guild):
+    url = "http://localhost/API/jupikd_discord/getsongqueue.php"
+    params = {
+        "key": config.jupsapikey,
+        "serverid": guild.id
+    }
+    return await PostRequest(url, params)
+
 #This function checks if a member has a specific permission.
 async def CheckPermission(guild, member_id, permission):
     #Check if the permission was one of the main permissions (member, mod, admin, owner).
@@ -429,7 +438,6 @@ async def GetRequest(url, params):
     try:
         async with aiohttp.ClientSession() as session:
             async with session.get(url=url, params=params) as resp:
-                print(resp)
                 jsonURL = await resp.json()
                 session.close()
 

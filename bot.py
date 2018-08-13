@@ -5,6 +5,9 @@ import sys, traceback, aiohttp, datetime
 
 import config, functions, databasefunctions
 
+if not discord.opus.is_loaded():
+    discord.opus.load_opus("opus")
+
 async def get_prefix(bot, message):
     prefixes = ["^"]
 
@@ -23,7 +26,8 @@ initial_extensions = [
     "cogs.util",
     "cogs.admin",
     "cogs.mod",
-    "cogs.image"
+    "cogs.image",
+    "cogs.voice"
 ]
 
 bot = commands.Bot(command_prefix=get_prefix, description="JupiKD, all purpose Discord bot. Created by: Isaac™#1240")
