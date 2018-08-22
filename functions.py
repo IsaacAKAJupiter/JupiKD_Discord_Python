@@ -261,6 +261,57 @@ async def GetSongQueue(guild):
     }
     return await PostRequest(url, params)
 
+#This function will check if a member has higher permissions than another member.
+async def CheckHigherPermission(first_member, second_member):
+    pass
+
+#This function will get a post from Reddit with the filter/sub.
+async def RedditPost(ctx, sub, filter):
+    url = f"http://www.reddit.com/r/{sub}/{filter}/.json"
+    params = {
+        "after": "t3_1ubf3e"
+    }
+    try:
+        async with aiohttp.ClientSession() as session:
+            async with session.get(url=url, data=params) as resp:
+                jsonURL = await resp.json()
+                session.close()
+
+        if jsonURL[0]["data"]["children"][0]["data"]["over_18"] == True and ctx.channel.is_nsfw() == False:
+            return "NSFW", None
+
+        image = jsonURL[0]["data"]["children"][0]["data"]["url"]
+
+        if "supload" in image:
+            image = image[19:-5]
+            image = f"https://i.supload.com/{image}-hd.gif"
+
+        if "gfycat" in image and not "thumbs" in image:
+            if "gifs" in image and not "detail" in image:
+                image = image[23:]
+            elif "gifs" in image and "detail" in image:
+                image = image[30:]
+            elif not "gifs" in image and not "detail" in image:
+                image = image[18:]
+            image = image.replace("/", "")
+            async with aiohttp.ClientSession() as session:
+                async with session.get(url=f"https://api.gfycat.com/v1/gfycats/{image}", data={"Authorization": f"Bearer {config.gfycatapikey}"}) as resp2:
+                    jsonURL2 = await resp2.json()
+                    session.close()
+
+            image = jsonURL2["gfyItem"]["gifUrl"]
+        
+        if "v.redd.it" in image:
+            image = f"{image}/DASH_9_6_M"
+
+        if ".gifv" in image:
+            image = image[:-1]
+
+        return jsonURL, image
+
+    except Exception:
+        return None, None
+
 #This function checks if a member has a specific permission.
 async def CheckPermission(guild, member_id, permission):
     #Check if the permission was one of the main permissions (member, mod, admin, owner).
@@ -271,6 +322,9 @@ async def CheckPermission(guild, member_id, permission):
     elif permission == "Mod":
         if json[0]["moderators"] != None:
             if str(member_id) in json[0]["moderators"]:
+                return True
+        if json[0]["admins"] != None:
+            if str(member_id) in json[0]["admins"]:
                 return True
 
     elif permission == "Admin":

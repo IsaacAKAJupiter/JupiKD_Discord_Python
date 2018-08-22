@@ -27,7 +27,8 @@ initial_extensions = [
     "cogs.admin",
     "cogs.mod",
     "cogs.image",
-    "cogs.voice"
+    "cogs.voice",
+    "cogs.nsfw"
 ]
 
 bot = commands.Bot(command_prefix=get_prefix, description="JupiKD, all purpose Discord bot. Created by: Isaac™#1240")
@@ -135,7 +136,12 @@ async def on_command_error(ctx, error):
     elif isinstance(error, commands.CheckFailure):
         for i in ctx.command.checks:
             if (i.__qualname__) == "is_nsfw.<locals>.pred":
-                await ctx.send("You cannot use NSFW commands in a non-NSFW channel.")
+                embed = await functions.CreateEmbed(
+                    author=(bot.user.display_name, discord.Embed.Empty, bot.user.avatar_url_as(format="png")),
+                    image="https://jups.xyz/images/nsfw.gif"
+                )
+                embed.add_field(name="Error", value="You cannot use NSFW commands in a non-NSFW channel.")
+                await ctx.send(embed=embed)
                 return
         
         await ctx.send("You do not have permission.")

@@ -1,7 +1,7 @@
 import discord
 from discord.ext import commands
 
-import aiohttp, datetime, random, asyncio
+import aiohttp, datetime, random, asyncio, youtube_dl
 
 import functions, config, databasefunctions
 

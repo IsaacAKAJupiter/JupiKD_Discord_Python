@@ -33,5 +33,60 @@ class ImageCommands():
             await ctx.send(file=discord.File(f"../../JupiKD_Discord_Python/images/{ctx.author.id}-{ctx.message.id}.png"))
             os.remove(f"../../JupiKD_Discord_Python/images/{ctx.author.id}-{ctx.message.id}.png")
 
+    @commands.cooldown(1, 10, commands.BucketType.user)
+    @commands.check(functions.MemberPermCommandCheck)
+    @commands.command(aliases=["spat", "discordmeme"])
+    async def severalpeoplearetyping(self, ctx, image = None):
+        """Command which overlays the given image into the SPAT template. jupikdsplit->Member"""
+
+        if await functions.TemplateImageManipulate(ctx, image, 400, 300, 67, 35, "severalpeoplearetyping") == True:
+            #Send the new image then delete on disk.
+            await ctx.send(file=discord.File(f"../../JupiKD_Discord_Python/images/{ctx.author.id}-{ctx.message.id}.png"))
+            os.remove(f"../../JupiKD_Discord_Python/images/{ctx.author.id}-{ctx.message.id}.png")
+    
+    @commands.cooldown(1, 10, commands.BucketType.user)
+    @commands.check(functions.MemberPermCommandCheck)
+    @commands.command(aliases=["television"])
+    async def tv(self, ctx, image = None):
+        """Command which overlays the given image into the TV template. jupikdsplit->Member"""
+
+        if await functions.TemplateImageManipulate(ctx, image, 221, 149, 168, 15, "tv") == True:
+            #Send the new image then delete on disk.
+            await ctx.send(file=discord.File(f"../../JupiKD_Discord_Python/images/{ctx.author.id}-{ctx.message.id}.png"))
+            os.remove(f"../../JupiKD_Discord_Python/images/{ctx.author.id}-{ctx.message.id}.png")
+
+    @commands.cooldown(1, 10, commands.BucketType.user)
+    @commands.check(functions.MemberPermCommandCheck)
+    @commands.command(aliases=["erectiledysfunction"])
+    async def ed(self, ctx, image = None):
+        """Command which overlays the given image into the ED template. jupikdsplit->Member"""
+
+        if await functions.TemplateImageManipulate(ctx, image, 450, 250, 15, 82, "erectiledysfunction") == True:
+            #Send the new image then delete on disk.
+            await ctx.send(file=discord.File(f"../../JupiKD_Discord_Python/images/{ctx.author.id}-{ctx.message.id}.png"))
+            os.remove(f"../../JupiKD_Discord_Python/images/{ctx.author.id}-{ctx.message.id}.png")
+
+    @commands.cooldown(1, 10, commands.BucketType.user)
+    @commands.check(functions.MemberPermCommandCheck)
+    @commands.command(aliases=["stupidmotherfucker"])
+    async def smf(self, ctx, image = None):
+        """Command which overlays the given image into the SMF template. jupikdsplit->Member"""
+
+        if await functions.TemplateImageManipulate(ctx, image, 576, 513, 32, 233, "stupidmotherfucker") == True:
+            #Send the new image then delete on disk.
+            await ctx.send(file=discord.File(f"../../JupiKD_Discord_Python/images/{ctx.author.id}-{ctx.message.id}.png"))
+            os.remove(f"../../JupiKD_Discord_Python/images/{ctx.author.id}-{ctx.message.id}.png")
+
+    @commands.cooldown(1, 10, commands.BucketType.user)
+    @commands.check(functions.MemberPermCommandCheck)
+    @commands.command(aliases=["sonofabitch"])
+    async def soab(self, ctx, image = None):
+        """Command which overlays the given image into the SOAB template. jupikdsplit->Member"""
+
+        if await functions.TemplateImageManipulate(ctx, image, 136, 187, 0, 0, "sonofabitch") == True:
+            #Send the new image then delete on disk.
+            await ctx.send(file=discord.File(f"../../JupiKD_Discord_Python/images/{ctx.author.id}-{ctx.message.id}.png"))
+            os.remove(f"../../JupiKD_Discord_Python/images/{ctx.author.id}-{ctx.message.id}.png")
+
 def setup(bot):
     bot.add_cog(ImageCommands(bot))
