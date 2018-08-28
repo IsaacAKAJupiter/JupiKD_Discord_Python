@@ -1,7 +1,7 @@
 import discord
 from discord.ext import commands
 
-import aiohttp, datetime, random, asyncio, youtube_dl
+import aiohttp, datetime, random, asyncio
 
 import functions, config, databasefunctions
 
@@ -136,7 +136,6 @@ class GeneralCommands():
         embed.add_field(name="Roles", value=len(ctx.message.author.guild.roles) - 1, inline=True)
         embed.add_field(name="Text Channels", value=len(ctx.message.author.guild.text_channels), inline=True)
         embed.add_field(name="Voice Channels", value=len(ctx.message.author.guild.voice_channels), inline=True)
-        embed.add_field(name="Text Channels", value=len(ctx.message.author.guild.text_channels), inline=True)
         embed.add_field(name="Channels + Categories", value=len(ctx.message.author.guild.channels), inline=True)
         embed.add_field(name="Emojis", value=len(ctx.message.author.guild.emojis), inline=True) 
         await ctx.send(embed=embed)
@@ -212,8 +211,13 @@ class GeneralCommands():
         #Turn them into a string of mentions.
         members = await functions.GetMemberObjects(ctx.guild, "moderators")
         mentions = ""
-        for member in members:
-            mentions += f"{member.mention}, "
+
+        if members != None:
+            for member in members:
+                mentions += f"{member.mention}, "
+        else:
+            await ctx.send("There are no mods.")
+            return
         
         mentions = mentions[:-2]
 
@@ -233,8 +237,13 @@ class GeneralCommands():
         #Turn them into a string of mentions.
         members = await functions.GetMemberObjects(ctx.guild, "admins")
         mentions = ""
-        for member in members:
-            mentions += f"{member.mention}, "
+
+        if members != None:
+            for member in members:
+                mentions += f"{member.mention}, "
+        else:
+            await ctx.send("There are no admins.")
+            return
         
         mentions = mentions[:-2]
 

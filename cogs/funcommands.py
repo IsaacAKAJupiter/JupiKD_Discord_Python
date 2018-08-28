@@ -1,7 +1,7 @@
 import discord
 from discord.ext import commands
 
-import aiohttp, random
+import aiohttp, random, emoji
 
 import functions, config, databasefunctions
 
@@ -42,24 +42,31 @@ class FunCommands():
     @commands.cooldown(1, 10, commands.BucketType.user)
     @commands.check(functions.MemberPermCommandCheck)
     @commands.command(aliases=["lemoji"])
-    async def largeemoji(self, ctx, emoji):
+    async def largeemoji(self, ctx, emojit):
         """Command which gets the actual image of the custom emoji. jupikdsplit->Member"""
 
         emoji_object = None
 
+        #Check if they used a unicode emoji.
+        for i in emojit:
+            if i in emoji.UNICODE_EMOJI:
+                await ctx.send(emojit)
+                return
+
         #Since custom emojis cannot have "<" or ">" in their name, we can check if it is a custom emoji with this.
         #Get the ID by getting the colons then from the last colon to the end should be the name (+1 | -1)
-        if "<" in emoji and ">" in emoji:
-            colons = [e for e, chars in enumerate(emoji) if chars == ":"]
-            emoji_id = emoji[colons[1] + 1: -1]
+        if "<" in emojit and ">" in emojit:
+            colons = [e for e, chars in enumerate(emojit) if chars == ":"]
+            emoji_id = emojit[colons[1] + 1: -1]
 
         emoji_object = discord.utils.find(lambda e: e.id == int(emoji_id), ctx.author.guild.emojis)
 
         if emoji_object == None:
             await ctx.send("Couldn't find the emoji specified.")
+            return
 
         embed = await functions.CreateEmbed(
-            title=f"Large emoji for {emoji[colons[0] + 1 : colons[1]]}",
+            title=f"Large emoji for {emojit[colons[0] + 1 : colons[1]]}",
             image=emoji_object.url,
             author=(self.bot.user.display_name, discord.Embed.Empty, self.bot.user.avatar_url_as(format="png"))
         )
@@ -169,23 +176,43 @@ class FunCommands():
             await ctx.send("The random selection was NSFW, and you are not in an NSFW allowed channel.")
             return
 
-        if ("youtu.be" in image or "youtube" in image) or jsonURL[0]["data"]["children"][0]["data"]["permalink"] in jsonURL[0]["data"]["children"][0]["data"]["url"]:
-            embed = await functions.CreateEmbed(
-                author=(self.bot.user.display_name, discord.Embed.Empty, self.bot.user.avatar_url_as(format="png")),
-                footer=("Due to Reddit's native video/gif implementation, some of the gifs/videos won't show. Also some hosts use .gifv which is not supported by Discord Embeds.", discord.Embed.Empty)
-            )
-        else:
-            embed = await functions.CreateEmbed(
-                author=(self.bot.user.display_name, discord.Embed.Empty, self.bot.user.avatar_url_as(format="png")),
-                image=image,
-                footer=("Due to Reddit's native video/gif implementation, some of the gifs/videos won't show. Also some hosts use .gifv which is not supported by Discord Embeds.", discord.Embed.Empty)
-            )
+        embed = await functions.RedditDefaultEmbed(jsonURL, image, self.bot)
+        await ctx.send(embed=embed)
 
-        embed.add_field(name="Title", value=jsonURL[0]["data"]["children"][0]["data"]["title"])
-        embed.add_field(name="Author", value=jsonURL[0]["data"]["children"][0]["data"]["author"], inline=False)
-        if not jsonURL[0]["data"]["children"][0]["data"]["permalink"] in jsonURL[0]["data"]["children"][0]["data"]["url"]:
-            embed.add_field(name="Insta Link", value=image, inline=False)
-        embed.add_field(name="URL", value=f"https://reddit.com{jsonURL[0]['data']['children'][0]['data']['permalink']}", inline=False)
+    @commands.cooldown(1, 10, commands.BucketType.user)
+    @commands.check(functions.MemberPermCommandCheck)
+    @commands.command(aliases=["rrandom"])
+    async def redditrandom(self, ctx):
+        """Command which gets a random post from a random subreddit. jupikdsplit->Member"""
+
+        jsonURL, image = await functions.RedditPost(ctx, "random", "random")
+        if jsonURL == None and image == None:
+            await ctx.send("Subreddit not found.")
+            return
+
+        if jsonURL == "NSFW":
+            await ctx.send("The random selection was NSFW, and you are not in an NSFW allowed channel.")
+            return
+
+        embed = await functions.RedditDefaultEmbed(jsonURL, image, self.bot)
+        await ctx.send(embed=embed)
+
+    @commands.cooldown(1, 10, commands.BucketType.user)
+    @commands.check(functions.MemberPermCommandCheck)
+    @commands.command(aliases=["rsubtop"])
+    async def subtop(self, ctx, sub):
+        """Command which gets the top post from a chosen subreddit. jupikdsplit->Member"""
+
+        jsonURL, image = await functions.RedditPost(ctx, sub, "top", "?t=all")
+        if jsonURL == None and image == None:
+            await ctx.send("Subreddit not found.")
+            return
+
+        if jsonURL == "NSFW":
+            await ctx.send("The random selection was NSFW, and you are not in an NSFW allowed channel.")
+            return
+
+        embed = await functions.RedditDefaultEmbed(jsonURL, image, self.bot)
         await ctx.send(embed=embed)
 
 def setup(bot):

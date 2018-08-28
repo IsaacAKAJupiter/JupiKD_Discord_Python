@@ -1,9 +1,11 @@
 import discord
 from discord.ext import commands
 
+from bs4 import BeautifulSoup
+
 import youtube_dl
 
-import os, sys, pathlib, aiohttp, asyncio
+import os, sys, pathlib, aiohttp, asyncio, math
 import functions, config
 
 class VoiceCommands:
@@ -24,13 +26,10 @@ class VoiceCommands:
 
     #Since you cannot use await in after when playing songs, use run_coroutine_threadsafe
     def my_after(self, e, ctx, song):
-        coro = ctx.send(f"Finished playing song with ID: {song}.")
-        coro2 = self.NextSong(ctx, song)
+        coro = self.NextSong(ctx, song)
         fut = asyncio.run_coroutine_threadsafe(coro, self.bot.loop)
-        fut2 = asyncio.run_coroutine_threadsafe(coro2, self.bot.loop)
         try:
             fut.result()
-            fut2.result()
         except:
             pass
 
@@ -163,7 +162,14 @@ class VoiceCommands:
             )
 
             for e, i in enumerate(jsonURL["items"]):
-                embed.add_field(name=f"{e + 1}. {i['snippet']['channelTitle']}", value=f"{i['snippet']['title']}")
+                url = "https://www.googleapis.com/youtube/v3/videos"
+                params = {
+                    "key": config.youtubeapikey,
+                    "id": i["id"]["videoId"],
+                    "part": "snippet,contentDetails,statistics"
+                }
+                jsonURLt = await functions.GetRequest(url, params)
+                embed.add_field(name=f"{e + 1}. {i['snippet']['channelTitle']} [{jsonURLt['items'][0]['contentDetails']['duration'].replace('PT', '')}]", value=f"{i['snippet']['title']}")
 
             await ctx.send(embed=embed)
 
@@ -196,6 +202,7 @@ class VoiceCommands:
             params = {
                 "key": config.jupsapikey,
                 "serverid": ctx.guild.id,
+                "requester": ctx.author.id,
                 "videoid": song
             }
             jsonURL = await functions.PostRequest(url, params)
@@ -217,6 +224,143 @@ class VoiceCommands:
         """Command which skips the currently playing music. jupikdsplit->Member"""
 
         ctx.voice_client.stop()
+
+    @commands.cooldown(1, 10, commands.BucketType.user)
+    @commands.check(functions.MemberPermCommandCheck)
+    @commands.command(aliases=["nowplaying", "currentlyplaying"])
+    async def currentsong(self, ctx):
+        """Command which gets the currently playing song. jupikdsplit->Member"""
+
+        song_queue = await functions.GetSongQueue(ctx.guild)
+
+        if song_queue and "success" in song_queue:
+            if song_queue["success"] == False and song_queue["error"] == "No queue.":
+                await ctx.send("There is no song playing.")
+                return
+        
+        voice_client = ctx.voice_client
+        if not voice_client or not voice_client.is_playing():
+            await ctx.send("There is no song playing.")
+            return
+
+        url = "https://www.googleapis.com/youtube/v3/videos"
+        params = {
+            "key": config.youtubeapikey,
+            "id": song_queue[0]["video_id"],
+            "part": "snippet,contentDetails,statistics"
+        }
+        jsonURL = await functions.GetRequest(url, params)
+
+        embed = await functions.CreateEmbed(
+            author=(self.bot.user.display_name, discord.Embed.Empty, self.bot.user.avatar_url_as(format="png")),
+            title="Current Song",
+            image=jsonURL["items"][0]["snippet"]["thumbnails"]["maxres"]["url"]
+        )
+        embed.add_field(name="Name", value=jsonURL["items"][0]["snippet"]["title"])
+        embed.add_field(name="Channel", value=jsonURL["items"][0]["snippet"]["channelTitle"])
+        embed.add_field(name="Duration", value=jsonURL["items"][0]["contentDetails"]["duration"].replace("PT", ""))
+        embed.add_field(name="Requester", value=ctx.guild.get_member(song_queue[0]["requester"]).mention)
+        embed.add_field(name="Views", value=jsonURL["items"][0]["statistics"]["viewCount"])
+        embed.add_field(name="Likes", value=jsonURL["items"][0]["statistics"]["likeCount"])
+        embed.add_field(name="Dislikes", value=jsonURL["items"][0]["statistics"]["dislikeCount"])
+        await ctx.send(embed=embed)
+
+    @commands.cooldown(1, 10, commands.BucketType.user)
+    @commands.check(functions.MemberPermCommandCheck)
+    @commands.command(aliases=["songqueue"])
+    async def queue(self, ctx):
+        """Command which gets the song queue. jupikdsplit->Member"""
+
+        song_queue = await functions.GetSongQueue(ctx.guild)
+
+        if song_queue and "success" in song_queue:
+            if song_queue["success"] == False and song_queue["error"] == "No queue.":
+                await ctx.send("No songs in the queue.")
+                return
+
+        embed = await functions.CreateEmbed(
+            author=(self.bot.user.display_name, discord.Embed.Empty, self.bot.user.avatar_url_as(format="png")),
+            title="Song Queue (Up to 25)"
+        )
+        
+        for i in range(24):
+            if i + 1 > len(song_queue):
+                break
+
+            url = "https://www.googleapis.com/youtube/v3/videos"
+            params = {
+                "key": config.youtubeapikey,
+                "id": song_queue[i]["video_id"],
+                "part": "snippet,contentDetails,statistics"
+            }
+            jsonURL = await functions.GetRequest(url, params)
+
+            embed.add_field(name=f"{i + 1}: {jsonURL['items'][0]['snippet']['title']}", value=f"Duration: {jsonURL['items'][0]['contentDetails']['duration'].replace('PT', '')} | Requester: {ctx.guild.get_member(song_queue[i]['requester']).mention}")
+
+        await ctx.send(embed=embed)
+
+    @commands.cooldown(1, 10, commands.BucketType.user)
+    @commands.check(functions.MemberPermCommandCheck)
+    @commands.command()
+    async def lyrics(self, ctx, *, song = None):
+        """Command which gets the lyrics from Genius. jupikdsplit->Member"""
+
+        if song == None:
+            song_queue = await functions.GetSongQueue(ctx.guild)
+
+            if song_queue and "success" in song_queue:
+                if song_queue["success"] == False and song_queue["error"] == "No queue.":
+                    await ctx.send("No song playing.")
+                    return
+
+        
+            url = "https://www.googleapis.com/youtube/v3/videos"
+            params = {
+                "key": config.youtubeapikey,
+                "id": song_queue[0]["video_id"],
+                "part": "snippet"
+            }
+            jsonURL = await functions.GetRequest(url, params)
+
+            song = jsonURL["items"][0]["snippet"]["title"]
+
+        url = f"http://api.genius.com/search?q={song}"
+        params = {"Authorization": f"Bearer {config.geniusapikey}"}
+        try:
+            async with aiohttp.ClientSession() as session:
+                async with session.get(url=url, headers=params) as resp:
+                    jsonURL2 = await resp.json()
+                    session.close()
+
+            if len(jsonURL2["response"]["hits"]) < 1:
+                await ctx.send("Song not found.")
+                return
+
+            async with aiohttp.ClientSession() as session:
+                async with session.get(url=jsonURL2["response"]["hits"][0]["result"]["url"], headers={"User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_9_4) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/35.0.1916.153 Safari/537.36"}) as resp:
+                    soup = BeautifulSoup(await resp.text(), features="html.parser")
+                    lyrics = soup.find('div', class_='lyrics').text.strip()
+                    amount = math.ceil(len(lyrics) / 2048) - 1
+                    for i in range(amount + 1):
+                        if i == 0:
+                            title = jsonURL2["response"]["hits"][0]["result"]["full_title"]
+                            title = title.replace("\\xa0", "")
+                            embed = await functions.CreateEmbed(
+                                author=(self.bot.user.display_name, discord.Embed.Empty, self.bot.user.avatar_url_as(format="png")),
+                                description=lyrics[:2048],
+                                title=f"Lyrics for: {title}"
+                            )
+                            await ctx.send(embed=embed)
+                        else:
+                            embed = await functions.CreateEmbed(
+                                author=(self.bot.user.display_name, discord.Embed.Empty, self.bot.user.avatar_url_as(format="png")),
+                                description=lyrics[2048 * (i):2048 * (i + 1)]
+                            )
+                            await ctx.send(embed=embed)
+        except Exception as e:
+            await ctx.send(e)
+            await ctx.send("An error occured.")
+            return
 
 def setup(bot):
     bot.add_cog(VoiceCommands(bot))

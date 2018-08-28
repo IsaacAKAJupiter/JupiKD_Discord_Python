@@ -47,9 +47,12 @@ class ModCommands():
             await ctx.send("You need to mention a member to kick.")
             return
         
-        #TODO: Check if the member being kicked is higher/same rank as the author.
-        #if await functions.CheckPermission(ctx.guild, ctx.message.mentions[0])
+        #Check if the member being kicked is higher/same rank as the author.
+        if await functions.CheckHigherPermission(ctx, ctx.author, ctx.message.mentions[0]) == False:
+            await ctx.send("You cannot kick someone of a higher rank. (Bot Admins/Guild Owner cannot be kicked)")
+            return
 
+        #Use a try except since the bot might error trying to kick a member it can't.
         try:
             await ctx.message.mentions[0].kick(reason=reason)
         except Exception:

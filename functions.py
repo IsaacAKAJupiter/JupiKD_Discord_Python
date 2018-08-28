@@ -231,7 +231,7 @@ async def GetMemberObjects(guild, column):
 
     #Get the right column and make sure it's not None/empty.
     #Split into list, loop through list and return all the member objects.
-    if server != None and (server[0][column] != None or server[0][column] != ""):
+    if server != None and server[0][column] != None and server[0][column] != "":
         id_list = server[0][column].split(",")
         members = []
         for member in id_list:
@@ -261,13 +261,10 @@ async def GetSongQueue(guild):
     }
     return await PostRequest(url, params)
 
-#This function will check if a member has higher permissions than another member.
-async def CheckHigherPermission(first_member, second_member):
-    pass
-
 #This function will get a post from Reddit with the filter/sub.
-async def RedditPost(ctx, sub, filter):
-    url = f"http://www.reddit.com/r/{sub}/{filter}/.json"
+async def RedditPost(ctx, sub, sfilter, params = None):
+    #Use the Reddit API with the sub and the filter (random/top/etc).
+    url = f"http://www.reddit.com/r/{sub}/{sfilter}/.json{params}"
     params = {
         "after": "t3_1ubf3e"
     }
@@ -277,11 +274,16 @@ async def RedditPost(ctx, sub, filter):
                 jsonURL = await resp.json()
                 session.close()
 
-        if jsonURL[0]["data"]["children"][0]["data"]["over_18"] == True and ctx.channel.is_nsfw() == False:
+        if sfilter == "random":
+            jsonURL = jsonURL[0]
+
+        #Check if the Reddit post was NSFW and if the channel the message was sent in was NSFW. If not return False.
+        if jsonURL["data"]["children"][0]["data"]["over_18"] == True and ctx.channel.is_nsfw() == False:
             return "NSFW", None
 
-        image = jsonURL[0]["data"]["children"][0]["data"]["url"]
+        image = jsonURL["data"]["children"][0]["data"]["url"]
 
+        #For each of the image/gif providers, return the gif URL.
         if "supload" in image:
             image = image[19:-5]
             image = f"https://i.supload.com/{image}-hd.gif"
@@ -300,6 +302,11 @@ async def RedditPost(ctx, sub, filter):
                     session.close()
 
             image = jsonURL2["gfyItem"]["gifUrl"]
+
+        if "imgur" in image and not "i.imgur" in image:
+            imgur_id = image[-8:]
+            imgur_id = imgur_id.replace("/", "")
+            image = f"https://i.imgur.com/{imgur_id}.gif"
         
         if "v.redd.it" in image:
             image = f"{image}/DASH_9_6_M"
@@ -312,9 +319,50 @@ async def RedditPost(ctx, sub, filter):
     except Exception:
         return None, None
 
+#This function is for the basic Reddit return embed.
+async def RedditDefaultEmbed(jsonURL, image, bot):
+    #Maybe change this to include other sites, but this just checks if the URL is the Reddit link, or if it's Youtube, don't show an image.
+    if ("youtu.be" in image or "youtube" in image) or jsonURL["data"]["children"][0]["data"]["permalink"] in jsonURL["data"]["children"][0]["data"]["url"]:
+        embed = await CreateEmbed(
+            author=(bot.user.display_name, discord.Embed.Empty, bot.user.avatar_url_as(format="png")),
+            footer=("Due to Reddit's native video/gif implementation, some of the gifs/videos won't show. Also some hosts use .gifv which is not supported by Discord Embeds.", discord.Embed.Empty)
+        )
+    else:
+        embed = await CreateEmbed(
+            author=(bot.user.display_name, discord.Embed.Empty, bot.user.avatar_url_as(format="png")),
+            image=image,
+            footer=("Due to Reddit's native video/gif implementation, some of the gifs/videos won't show. Also some hosts use .gifv which is not supported by Discord Embeds.", discord.Embed.Empty)
+        )
+
+    #Set the rest of the embed then return.
+    embed.add_field(name="Title", value=jsonURL["data"]["children"][0]["data"]["title"])
+    embed.add_field(name="Author", value=jsonURL["data"]["children"][0]["data"]["author"], inline=False)
+    if not jsonURL["data"]["children"][0]["data"]["permalink"] in jsonURL["data"]["children"][0]["data"]["url"]:
+        embed.add_field(name="Insta Link", value=image, inline=False)
+    embed.add_field(name="URL", value=f"https://reddit.com{jsonURL['data']['children'][0]['data']['permalink']}", inline=False)
+
+    return embed
+
+#This function will check if a member has higher permissions than another member.
+async def CheckHigherPermission(ctx, first_member, second_member):
+    #Check the main permissions you cannot kick. (Owner and Admin).
+    if await CheckPermission(ctx.guild, first_member.id, "Owner") == True:
+        return True
+
+    if await CheckPermission(ctx.guild, first_member.id, "Admin") == True and await CheckPermission(ctx.guild, second_member.id, "Admin") == False and await CheckPermission(ctx.guild, second_member.id, "Owner") == False:
+        return True
+
+    #Get the command permission so the author can't kick the same permission.
+    permission = GetPermissionForCommand(ctx, ctx.command.name)
+    if await CheckPermission(ctx.guild, first_member.id, permission) == True and await CheckPermission(ctx.guild, second_member.id, permission) == False and await CheckPermission(ctx.guild, second_member.id, "Admin") == False and await CheckPermission(ctx.guild, second_member.id, "Owner") == False:
+        return True
+
+    #If the checks fail, return False.
+    return False
+
 #This function checks if a member has a specific permission.
 async def CheckPermission(guild, member_id, permission):
-    #Check if the permission was one of the main permissions (member, mod, admin, owner).
+    #Check if the permission was one of the main permissions (Member, Mod, Admin, Owner).
     json = await GetGuildInfo(guild, "server")
     if permission == "Member":
         return True
