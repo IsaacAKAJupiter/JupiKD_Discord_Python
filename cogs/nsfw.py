@@ -68,8 +68,9 @@ class NSFWCommands():
             await ctx.send("An error occured.")
             return
 
-        embed = await functions.RedditDefaultEmbed(jsonURL, image, self.bot)
-        await ctx.send(embed=embed)
+        #embed = await functions.RedditDefaultEmbed(jsonURL, image, self.bot)
+        await ctx.send(f"Image/Gif: {image}\nReddit Link: https://reddit.com{jsonURL['data']['children'][0]['data']['permalink']}\nI can't use embeds for GIF's since they are lower quality :angry:")
+        #await ctx.send(embed=embed)
 
     @commands.cooldown(1, 10, commands.BucketType.user)
     @commands.check(functions.MemberPermCommandCheck)
@@ -86,8 +87,9 @@ class NSFWCommands():
             await ctx.send("An error occured.")
             return
 
-        embed = await functions.RedditDefaultEmbed(jsonURL, image, self.bot)
-        await ctx.send(embed=embed)
+        #embed = await functions.RedditDefaultEmbed(jsonURL, image, self.bot)
+        await ctx.send(f"Image/Gif: {image}\nReddit Link: https://reddit.com{jsonURL['data']['children'][0]['data']['permalink']}\nI can't use embeds for GIF's since they are lower quality :angry:")
+        #await ctx.send(embed=embed)
 
     @commands.cooldown(1, 10, commands.BucketType.user)
     @commands.check(functions.MemberPermCommandCheck)
@@ -101,8 +103,9 @@ class NSFWCommands():
             await ctx.send("An error occured.")
             return
 
-        embed = await functions.RedditDefaultEmbed(jsonURL, image, self.bot)
-        await ctx.send(embed=embed)
+        #embed = await functions.RedditDefaultEmbed(jsonURL, image, self.bot)
+        await ctx.send(f"Image/Gif: {image}\nReddit Link: https://reddit.com{jsonURL['data']['children'][0]['data']['permalink']}\nI can't use embeds for GIF's since they are lower quality :angry:")
+        #await ctx.send(embed=embed)
 
 def setup(bot):
     bot.add_cog(NSFWCommands(bot))

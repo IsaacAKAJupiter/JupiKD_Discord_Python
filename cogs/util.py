@@ -1,7 +1,7 @@
 import discord
 from discord.ext import commands
 
-import aiohttp
+import aiohttp, requests
 
 import functions, config, databasefunctions
 
@@ -77,6 +77,47 @@ class UtilCommands():
                             embed.add_field(name="File Positives", value=f"{jsonURL2['positives']}/{jsonURL2['total']}")
 
             await ctx.send(embed=embed)
+
+    @commands.cooldown(1, 10, commands.BucketType.user)
+    @commands.check(functions.MemberPermCommandCheck)
+    @commands.command(aliases=["tinyurl", "shortenurl", "shorturl"])
+    async def shorten(self, ctx, link):
+        """Command which creates shortened links with TinyURL. jupikdsplit->Member"""
+
+        try:
+            async with aiohttp.ClientSession() as session:
+                async with session.get(url="https://tinyurl.com/api-create.php", params={"url": link}) as resp:
+                    resp = await resp.text()
+                    session.close()
+
+            embed = await functions.CreateEmbed(
+                title="URL Shorten",
+                author=(self.bot.user.display_name, discord.Embed.Empty, self.bot.user.avatar_url_as(format="png"))
+            )
+            embed.add_field(name="Long URL", value=link)
+            embed.add_field(name="Shortened URL", value=resp, inline=False)
+            await ctx.send(embed=embed)
+
+        #Catch exception, print, and return None.
+        except Exception as e:
+            print(f"Error: {e}")
+
+    @commands.cooldown(1, 10, commands.BucketType.user)
+    @commands.check(functions.MemberPermCommandCheck)
+    @commands.command()
+    async def unshorten(self, ctx, link):
+        """Command which unshortens links. jupikdsplit->Member"""
+
+        session = requests.Session()
+        resp = session.head(link, allow_redirects=True)
+
+        embed = await functions.CreateEmbed(
+            title="URL Unshorten",
+            author=(self.bot.user.display_name, discord.Embed.Empty, self.bot.user.avatar_url_as(format="png"))
+        )
+        embed.add_field(name="Shortened URL", value=link)
+        embed.add_field(name="Actual Location", value=resp.url, inline=False)
+        await ctx.send(embed=embed)
 
 def setup(bot):
     bot.add_cog(UtilCommands(bot))

@@ -143,6 +143,9 @@ async def on_command_error(ctx, error):
                 embed.add_field(name="Error", value="You cannot use NSFW commands in a non-NSFW channel.")
                 await ctx.send(embed=embed)
                 return
+            elif (i.__qualname__) == "CheckGuildPremium":
+                await ctx.send("Your guild is not premium.")
+                return
         
         await ctx.send("You do not have permission.")
 

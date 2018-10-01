@@ -45,29 +45,20 @@ class FunCommands():
     async def largeemoji(self, ctx, emojit):
         """Command which gets the actual image of the custom emoji. jupikdsplit->Member"""
 
-        emoji_object = None
-
         #Check if they used a unicode emoji.
         for i in emojit:
             if i in emoji.UNICODE_EMOJI:
                 await ctx.send(emojit)
                 return
 
-        #Since custom emojis cannot have "<" or ">" in their name, we can check if it is a custom emoji with this.
-        #Get the ID by getting the colons then from the last colon to the end should be the name (+1 | -1)
-        if "<" in emojit and ">" in emojit:
-            colons = [e for e, chars in enumerate(emojit) if chars == ":"]
-            emoji_id = emojit[colons[1] + 1: -1]
-
-        emoji_object = discord.utils.find(lambda e: e.id == int(emoji_id), ctx.author.guild.emojis)
-
-        if emoji_object == None:
-            await ctx.send("Couldn't find the emoji specified.")
+        emoji_id, emoji_extension, emoji_name = await functions.GetEmojiFromMessage(emojit)
+        if not emoji_id or not emoji_extension or not emoji_name:
+            await ctx.send("Emoji not found.")
             return
 
         embed = await functions.CreateEmbed(
-            title=f"Large emoji for {emojit[colons[0] + 1 : colons[1]]}",
-            image=emoji_object.url,
+            title=f"Large emoji for {emoji_name}",
+            image=f"https://cdn.discordapp.com/emojis/{emoji_id}.{emoji_extension}",
             author=(self.bot.user.display_name, discord.Embed.Empty, self.bot.user.avatar_url_as(format="png"))
         )
         await ctx.send(embed=embed)
@@ -176,8 +167,9 @@ class FunCommands():
             await ctx.send("The random selection was NSFW, and you are not in an NSFW allowed channel.")
             return
 
-        embed = await functions.RedditDefaultEmbed(jsonURL, image, self.bot)
-        await ctx.send(embed=embed)
+        #embed = await functions.RedditDefaultEmbed(jsonURL, image, self.bot)
+        await ctx.send(f"Image/Gif: {image}\nReddit Link: https://reddit.com{jsonURL['data']['children'][0]['data']['permalink']}\nI can't use embeds for GIF's since they are lower quality :angry:")
+        #await ctx.send(embed=embed)
 
     @commands.cooldown(1, 10, commands.BucketType.user)
     @commands.check(functions.MemberPermCommandCheck)
@@ -194,8 +186,9 @@ class FunCommands():
             await ctx.send("The random selection was NSFW, and you are not in an NSFW allowed channel.")
             return
 
-        embed = await functions.RedditDefaultEmbed(jsonURL, image, self.bot)
-        await ctx.send(embed=embed)
+        #embed = await functions.RedditDefaultEmbed(jsonURL, image, self.bot)
+        await ctx.send(f"Image/Gif: {image}\nReddit Link: https://reddit.com{jsonURL['data']['children'][0]['data']['permalink']}\nI can't use embeds for GIF's since they are lower quality :angry:")
+        #await ctx.send(embed=embed)
 
     @commands.cooldown(1, 10, commands.BucketType.user)
     @commands.check(functions.MemberPermCommandCheck)
@@ -212,8 +205,9 @@ class FunCommands():
             await ctx.send("The random selection was NSFW, and you are not in an NSFW allowed channel.")
             return
 
-        embed = await functions.RedditDefaultEmbed(jsonURL, image, self.bot)
-        await ctx.send(embed=embed)
+        #embed = await functions.RedditDefaultEmbed(jsonURL, image, self.bot)
+        await ctx.send(f"Image/Gif: {image}\nReddit Link: https://reddit.com{jsonURL['data']['children'][0]['data']['permalink']}\nI can't use embeds for GIF's since they are lower quality :angry:")
+        #await ctx.send(embed=embed)
 
 def setup(bot):
     bot.add_cog(FunCommands(bot))

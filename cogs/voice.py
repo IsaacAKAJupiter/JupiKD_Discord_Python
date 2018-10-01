@@ -121,6 +121,7 @@ class VoiceCommands:
 
     @commands.cooldown(1, 10, commands.BucketType.user)
     @commands.check(functions.MemberPermCommandCheck)
+    #@commands.check(functions.CheckGuildPremium)
     @commands.command()
     async def play(self, ctx, *, song):
         """Command which plays a song in a voice channel. jupikdsplit->Member"""

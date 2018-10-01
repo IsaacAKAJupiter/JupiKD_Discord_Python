@@ -49,7 +49,7 @@ class ModCommands():
         
         #Check if the member being kicked is higher/same rank as the author.
         if await functions.CheckHigherPermission(ctx, ctx.author, ctx.message.mentions[0]) == False:
-            await ctx.send("You cannot kick someone of a higher rank. (Bot Admins/Guild Owner cannot be kicked)")
+            await ctx.send("You cannot kick someone of a higher rank.")
             return
 
         #Use a try except since the bot might error trying to kick a member it can't.
@@ -72,6 +72,64 @@ class ModCommands():
             await ctx.message.mentions[0].send(f"You have been kicked from the guild \"{ctx.guild.name}\" with the reason: \"{reason}\".")
         except:
             pass
+
+    @commands.cooldown(1, 10, commands.BucketType.user)
+    @commands.check(functions.MemberPermCommandCheck)
+    @commands.command()
+    async def mute(self, ctx, member):
+        """Command which gives a member a muted role. jupikdsplit->Mod"""
+
+        #To speed up the command, we aren't going to get the guild info until after we check if the author even mentioned a member.
+        if len(ctx.message.mentions) < 1:
+            await ctx.send("Please mention the member you would like to mute.")
+            return
+
+        server = await functions.GetGuildInfo(ctx.guild, "server")
+
+        #Check if the guild has a muted role set.
+        if server[0]["muted_role"] == None:
+            await ctx.send("The guild doesn't have a muted role set. Use createmutedrole to create a muted role OR mutedrole [role] to set a role manually.")
+            return
+
+        for role in ctx.guild.roles:
+            if role.id == server[0]["muted_role"]:
+                try:
+                    await ctx.message.mentions[0].add_roles(role, reason=f"{ctx.author.name} used the mute command.")
+                except Exception:
+                    await ctx.send("I do not have the correct permission to mute this member.")
+                    return
+
+                await ctx.send(f"{ctx.message.mentions[0].name} has been muted.")
+                return
+        
+        await ctx.send("Couldn't find the muted role in the guild. Please set the muted role again before using this command.")
+        await databasefunctions.UpdateDatabase(ctx.guild, "server", "muted_role", add=True, new_value=None, old_value=None)
+
+    @commands.cooldown(1, 10, commands.BucketType.user)
+    @commands.check(functions.MemberPermCommandCheck)
+    @commands.command()
+    async def unmute(self, ctx, member):
+        """Command which removes a muted role from a member. jupikdsplit->Mod"""
+
+        #To speed up the command, we aren't going to get the guild info until after we check if the author even mentioned a member.
+        if len(ctx.message.mentions) < 1:
+            await ctx.send("Please mention the member you would like to mute.")
+            return
+
+        server = await functions.GetGuildInfo(ctx.guild, "server")
+
+        #Check if the guild has a muted role set.
+        if server[0]["muted_role"] == None:
+            await ctx.send("The guild doesn't have a muted role set. Use createmutedrole to create a muted role OR mutedrole [role] to set a role manually.")
+            return
+
+        for role in ctx.message.mentions[0].roles:
+            if role.id == server[0]["muted_role"]:
+                await ctx.message.mentions[0].remove_roles(role, reason=f"{ctx.author.name} used the unmute command.")
+                await ctx.send(f"{ctx.message.mentions[0].name} was unmuted.")
+                return
+
+        await ctx.send(f"{ctx.message.mentions[0].name} was not muted.")
 
 def setup(bot):
     bot.add_cog(ModCommands(bot))

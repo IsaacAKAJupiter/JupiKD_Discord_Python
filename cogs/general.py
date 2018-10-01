@@ -165,8 +165,8 @@ class GeneralCommands():
         embed.add_field(name="Creator", value="Isaac™#1240", inline=True)
         embed.add_field(name="Library", value=f"discord.py rewrite v{discord.__version__}", inline=True)
         embed.add_field(name="\u200b", value="\u200b", inline=True)
-        embed.add_field(name="Invite", value="[Discord Link](https://discordapp.com/oauth2/authorize?client_id=362346139569094666&scope=bot&permissions=2146958591)", inline=True)
-        embed.add_field(name="Website", value="[Jups Link](https://jups.xyz/JupiKD_Discord)", inline=True)
+        embed.add_field(name="Invite", value="[Discord Link](https://discordapp.com/oauth2/authorize?client_id=362346139569094666&scope=bot&permissions=1275456576&redirect_uri=https://www.jups.xyz/discordbot&response_type=code)", inline=True)
+        embed.add_field(name="Website", value="[Jups Link](https://jups.xyz/discordbot)", inline=True)
         embed.add_field(name="Github", value="[Github Link](https://github.com/IsaacAKAJupiter/JupiKD_Discord_Python)", inline=True)
         embed.add_field(name="Commands", value=len(non_owner_commands))
         embed.add_field(name="Guilds", value=len(self.bot.guilds))
@@ -184,7 +184,7 @@ class GeneralCommands():
             author=(self.bot.user.display_name, discord.Embed.Empty, self.bot.user.avatar_url_as(format="png")),
             image="https://jups.xyz/images/invite.gif"
         )
-        embed.add_field(name="Click the link below to invite me to your guild!", value="[Discord Invite Link](https://discordapp.com/oauth2/authorize?client_id=362346139569094666&scope=bot&permissions=2146958591)", inline=True)
+        embed.add_field(name="Click the link below to invite me to your guild!", value="[Discord Invite Link](https://discordapp.com/oauth2/authorize?client_id=362346139569094666&scope=bot&permissions=1275456576&redirect_uri=https://www.jups.xyz/discordbot&response_type=code)", inline=True)
         await ctx.send(embed=embed)
 
     @commands.cooldown(1, 10, commands.BucketType.user)

@@ -28,8 +28,8 @@ async def GetGuildInfo(guild, table):
     }
     jsonURL = await PostRequest(url, params)
     #Check if jsonURL isn't None.
-    #Since the API returns the guild info and doesn't include the key "success", check if success is in it.
-    if jsonURL != None and not "success" in jsonURL:
+    #Since the API returns the guild info and doesn't include the key "error", check if error is in it.
+    if jsonURL != None and not "error" in jsonURL:
         return jsonURL
     else:
         return None
@@ -148,8 +148,34 @@ async def DeleteAllRemovedGuilds(guilds):
         if guild["server_id"] not in guilds:
             await DeleteGuildFromID(guild["server_id"])
 
-#This function will deal with the template image manipulation commands.
-async def TemplateImageManipulate(ctx, image, width, height, x, y, path):
+#This function gets an emoji from a message.
+async def GetEmojiFromMessage(message):
+    #Since custom emojis cannot have "<" or ">" in their name, we can check if it is a custom emoji with this.
+    #Get the ID by getting the colons then from the last colon to the end should be the name (+1 | -1)
+    if "<" in message and ">" in message:
+        colons = [e for e, chars in enumerate(message) if chars == ":"]
+        emoji_id = message[colons[1] + 1: -1]
+    else:
+        return None, None, None
+
+    emoji_extension = "png"
+    if message.startswith("<a"):
+        emoji_extension = "gif"
+
+    return emoji_id, emoji_extension, message[colons[0] + 1 : colons[1]]
+
+#This function will get the last message with an image attachment.
+async def GetLastMessageWithImage(ctx):
+    #Get the channel to search for the messages.
+    async for m in ctx.channel.history(limit=100):
+        if len(m.attachments) > 0:
+            if m.attachments[0].height != None and m.attachments[0].width != None:
+                return m
+
+    return None
+
+#This function gets an image from a message.
+async def GetImageFromMessage(ctx, image):
     #Check if there is an attachment and if there is then save it to disk.
     #If there isn't check if the member sent an image link.
     if len(ctx.message.attachments) > 0:
@@ -157,13 +183,48 @@ async def TemplateImageManipulate(ctx, image, width, height, x, y, path):
             await ctx.message.attachments[0].save(f"../../JupiKD_Discord_Python/images/{ctx.author.id}-{ctx.message.id}.png")
             image = Image.open(f"../../JupiKD_Discord_Python/images/{ctx.author.id}-{ctx.message.id}.png")
         else:
-            await ctx.send("The attachment you have sent is not an image file.")
             return False
+    elif len(ctx.message.mentions) > 0:
+        image = await ImageRequest(ctx.message.mentions[0].avatar_url_as(format="png"))
     else:
-        image = await ImageRequest(image)
+        original_image = image
+        #Check if the author wrote a ^ to get the last image as an attachment.
+        if image == "^":
+            image = await GetLastMessageWithImage(ctx)
+            await image.attachments[0].save(f"../../JupiKD_Discord_Python/images/{ctx.author.id}-{ctx.message.id}.png")
+            image = Image.open(f"../../JupiKD_Discord_Python/images/{ctx.author.id}-{ctx.message.id}.png")
+            return image
+
+        #Check if the message is for an emoji.
+        emoji_id, emoji_extension, emoji_name = await GetEmojiFromMessage(original_image)
+        if emoji_id and emoji_extension and emoji_name:
+            image = await ImageRequest(f"https://cdn.discordapp.com/emojis/{emoji_id}.{emoji_extension}")
+        else:
+            image = None
+        
+        #Check if image is still None then check if it's a member.
         if image == None:
-            await ctx.send("You didn't send an image attachment and your link was either blank or not a link to an image.")
-            return False
+            image = await GetMemberByName(ctx.guild, original_image)
+            if image != None:
+                image = await ImageRequest(image.avatar_url)
+        
+        #Check if image is still None then check if the original_image is just a link to an image.
+        if image == None:
+            image = await ImageRequest(original_image)
+        
+    #After checking all of those, check if image is None, then return False/image.
+    if image == None:
+        return False
+    else:
+        return image
+
+#This function will deal with the template image manipulation commands.
+async def TemplateImageManipulate(ctx, image, width, height, x, y, path):
+    #Get the image from the function above.
+    image = await GetImageFromMessage(ctx, image)
+    if image == False:
+        await ctx.send("You didn't send an image attachment and your link was either blank or not a link to an image.")
+        return False
     
     #Crop the new image onto the template.
     bottom_image = Image.open(f"../../JupiKD_Discord_Python/images/{path}.png")
@@ -261,8 +322,17 @@ async def GetSongQueue(guild):
     }
     return await PostRequest(url, params)
 
+#This function will check to see if a command exists.
+async def CommandExist(bot, command):
+    for i in bot.commands:
+        if not i.cog_name == None and not i.cog_name == "OwnerCog":
+            if i.name == command:
+                return True
+
+    return False
+
 #This function will get a post from Reddit with the filter/sub.
-async def RedditPost(ctx, sub, sfilter, params = None):
+async def RedditPost(ctx, sub, sfilter, params = ""):
     #Use the Reddit API with the sub and the filter (random/top/etc).
     url = f"http://www.reddit.com/r/{sub}/{sfilter}/.json{params}"
     params = {
@@ -284,35 +354,35 @@ async def RedditPost(ctx, sub, sfilter, params = None):
         image = jsonURL["data"]["children"][0]["data"]["url"]
 
         #For each of the image/gif providers, return the gif URL.
-        if "supload" in image:
-            image = image[19:-5]
-            image = f"https://i.supload.com/{image}-hd.gif"
+        #if "supload" in image:
+        #    image = image[19:-5]
+        #    image = f"https://i.supload.com/{image}-hd.gif"
 
-        if "gfycat" in image and not "thumbs" in image:
-            if "gifs" in image and not "detail" in image:
-                image = image[23:]
-            elif "gifs" in image and "detail" in image:
-                image = image[30:]
-            elif not "gifs" in image and not "detail" in image:
-                image = image[18:]
-            image = image.replace("/", "")
-            async with aiohttp.ClientSession() as session:
-                async with session.get(url=f"https://api.gfycat.com/v1/gfycats/{image}", data={"Authorization": f"Bearer {config.gfycatapikey}"}) as resp2:
-                    jsonURL2 = await resp2.json()
-                    session.close()
+        #if "gfycat" in image and not "thumbs" in image:
+        #    if "gifs" in image and not "detail" in image:
+        #        image = image[23:]
+        #    elif "gifs" in image and "detail" in image:
+        #        image = image[30:]
+        #    elif not "gifs" in image and not "detail" in image:
+        #        image = image[18:]
+        #    image = image.replace("/", "")
+        #    async with aiohttp.ClientSession() as session:
+        #        async with session.get(url=f"https://api.gfycat.com/v1/gfycats/{image}", data={"Authorization": f"Bearer {config.gfycatapikey}"}) as resp2:
+        #            jsonURL2 = await resp2.json()
+        #            session.close()
 
-            image = jsonURL2["gfyItem"]["gifUrl"]
+        #    image = jsonURL2["gfyItem"]["gifUrl"]
 
-        if "imgur" in image and not "i.imgur" in image:
-            imgur_id = image[-8:]
-            imgur_id = imgur_id.replace("/", "")
-            image = f"https://i.imgur.com/{imgur_id}.gif"
+        #if "imgur" in image and not "i.imgur" in image:
+        #    imgur_id = image[-8:]
+        #    imgur_id = imgur_id.replace("/", "")
+        #    image = f"https://i.imgur.com/{imgur_id}.gif"
         
-        if "v.redd.it" in image:
-            image = f"{image}/DASH_9_6_M"
+        #if "v.redd.it" in image:
+        #    image = f"{image}/DASH_9_6_M"
 
-        if ".gifv" in image:
-            image = image[:-1]
+        #if ".gifv" in image:
+        #    image = image[:-1]
 
         return jsonURL, image
 
@@ -330,7 +400,7 @@ async def RedditDefaultEmbed(jsonURL, image, bot):
     else:
         embed = await CreateEmbed(
             author=(bot.user.display_name, discord.Embed.Empty, bot.user.avatar_url_as(format="png")),
-            image=image,
+            #image=image,
             footer=("Due to Reddit's native video/gif implementation, some of the gifs/videos won't show. Also some hosts use .gifv which is not supported by Discord Embeds.", discord.Embed.Empty)
         )
 
@@ -408,6 +478,22 @@ async def MemberPermCommandCheck(ctx):
             return True
         else:
             return False
+
+#This function will check if a guild is premium.
+async def CheckGuildPremium(ctx):
+    #Send a request to my API to see if the guild is premium.
+    url = "http://localhost/API/jupikd_discord/checkifguildpremium.php"
+    params = {
+        "key": config.jupsapikey,
+        "serverid": ctx.guild.id
+    }
+    jsonURL = await PostRequest(url, params)
+
+    if jsonURL != None:
+        if jsonURL["success"] == True:
+            return True
+    
+    return False
 
 #This function gets the permission for a command.
 async def GetPermissionForCommand(ctx, command):
@@ -497,6 +583,18 @@ async def OnMemberRemoveCheck(member, user):
 #This function deals with the join message when a member joins a guild.
 async def OnMemberJoinCheck(member):
     #Get the table from the database (just the specific guild entries).
+    server = await GetGuildInfo(member.guild, "server")
+    #Check to see if the member should be getting a role upon joining.
+    if server[0]["join_role"] != None:
+        join_role = [r for r in member.guild.roles if r.id == server[0]["join_role"]]
+        if join_role:
+            try:
+                await member.add_roles(join_role[0], reason="Automatic Join Role")
+            except Exception:
+                pass
+        else:
+            #If the role is messed up, remove it from the database.
+            await databasefunctions.UpdateDatabase(member.guild, "server", "join_role", add=True, new_value=None, old_value=None)
     #Make sure the variable isn't None/empty, then check through each custom permission.
     join_leave_messages = await GetGuildInfo(member.guild, "join_leave_messages")
     if join_leave_messages != None and join_leave_messages != "":
@@ -559,7 +657,8 @@ async def ImageRequest(url):
     try:
         async with aiohttp.ClientSession() as session:
             async with session.get(url=url) as resp:
-                return Image.open(io.BytesIO(await resp.read()))
+                image = Image.open(io.BytesIO(await resp.read()))
                 session.close()
+                return image
     except Exception:
         return None
