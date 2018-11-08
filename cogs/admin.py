@@ -91,7 +91,7 @@ class AdminCommands():
     @commands.cooldown(1, 10, commands.BucketType.user)
     @commands.check(functions.MemberPermCommandCheck)
     @commands.command(aliases=["autorole"])
-    async def joinrole(self, ctx, role):
+    async def joinrole(self, ctx, *, role):
         """Command which gives a member a role upon joining the guild. jupikdsplit->Admin"""
 
         role_object = None

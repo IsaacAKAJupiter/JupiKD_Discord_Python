@@ -446,5 +446,38 @@ class GeneralCommands():
         else:
             await ctx.send("Steam user not found. You can use CustomURL or Steam64ID.")
 
+    @commands.cooldown(1, 10, commands.BucketType.user)
+    @commands.check(functions.MemberPermCommandCheck)
+    @commands.command(aliases=["cinfo", "chelp", "commandhelp"])
+    async def commandinfo(self, ctx, command):
+        """Command which shows information about a command. jupikdsplit->Member"""
+
+        #Check if the member searched for an alias of a command.
+        for i in self.bot.commands:
+            if command in i.aliases or command == i.name:
+                command = i
+
+        if isinstance(command, str):
+            await ctx.send(f"Cannot find command: \"{command}\".")
+            return
+
+        #Get the current permission and uses.
+        current_permission = await functions.GetPermissionForCommand(ctx, command.name)
+        uses = await functions.GetDefaultCommandPermissions()
+        for i in uses:
+            if i["name"] == command.name:
+                uses = i["uses"]
+
+        desc_permission = command.help.split(" jupikdsplit->")
+        embed = await functions.CreateEmbed(
+            author=(self.bot.user.display_name, discord.Embed.Empty, self.bot.user.avatar_url_as(format="png"))
+        )
+        embed.add_field(name="Command", value=command.name, inline=False)
+        embed.add_field(name="Description", value=desc_permission[0], inline=False)
+        embed.add_field(name="Default Permission", value=desc_permission[1], inline=True)
+        embed.add_field(name="Current Permission", value=current_permission, inline=True)
+        embed.add_field(name="Uses", value=uses, inline=True)
+        await ctx.send(embed=embed)
+
 def setup(bot):
     bot.add_cog(GeneralCommands(bot))

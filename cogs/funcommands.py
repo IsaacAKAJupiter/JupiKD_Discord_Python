@@ -43,7 +43,7 @@ class FunCommands():
     @commands.check(functions.MemberPermCommandCheck)
     @commands.command(aliases=["lemoji"])
     async def largeemoji(self, ctx, emojit):
-        """Command which gets the actual image of the custom emoji. jupikdsplit->Member"""
+        """Command which gets the actual image of the custom emoji. jupikdsplit->Member"""          
 
         #Check if they used a unicode emoji.
         for i in emojit:
@@ -53,11 +53,40 @@ class FunCommands():
 
         emoji_id, emoji_extension, emoji_name = await functions.GetEmojiFromMessage(emojit)
         if not emoji_id or not emoji_extension or not emoji_name:
-            await ctx.send("Emoji not found.")
-            return
+            #Check if the person just used an emoji_id.
+            emoji_name = emojit
+            try:
+                emojit = int(emojit)
+            except:
+                await ctx.send("Emoji not found.")
+                return
+
+            #Try for GIF.
+            url = f"https://cdn.discordapp.com/emojis/{emojit}.gif"
+            async with aiohttp.ClientSession() as session:
+                async with session.get(url=url) as resp:
+                    if resp.status != 415:
+                        emoji_id = emojit
+                        emoji_extension = "gif"
+                    session.close()
+
+            #Try for PNG.
+            if not emoji_id and not emoji_extension:
+                url = f"https://cdn.discordapp.com/emojis/{emojit}.png"
+                async with aiohttp.ClientSession() as session:
+                    async with session.get(url=url) as resp:
+                        if resp.status != 415:
+                            emoji_id = emojit
+                            emoji_extension = "png"
+                        session.close()
+
+            if not emoji_id and not emoji_extension:
+                await ctx.send("Emoji not found.")
+                return
 
         embed = await functions.CreateEmbed(
-            title=f"Large emoji for {emoji_name}",
+            title="Large Emoji",
+            description = f"Name/ID = {emoji_name}",
             image=f"https://cdn.discordapp.com/emojis/{emoji_id}.{emoji_extension}",
             author=(self.bot.user.display_name, discord.Embed.Empty, self.bot.user.avatar_url_as(format="png"))
         )
