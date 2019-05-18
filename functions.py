@@ -1,4 +1,4 @@
-import os, aiohttp, requests, discord, io
+import os, aiohttp, requests, discord, io, math
 
 from PIL import Image, ImageFilter
 
@@ -6,7 +6,7 @@ import config, databasefunctions
 
 #This function retrieves the specified guild prefix.
 async def GetGuildPrefix(guild_id):
-    url = "http://localhost/API/jupikd_discord/getguildprefix.php"
+    url = "http://localhost/old/API/jupikd_discord/getguildprefix.php"
     params = {
         "key": config.jupsapikey,
         "serverid": guild_id
@@ -20,7 +20,7 @@ async def GetGuildPrefix(guild_id):
 
 #This function retrieves the specified guild table information from the database.
 async def GetGuildInfo(guild, table):
-    url = "http://localhost/API/jupikd_discord/getguildinfo.php"
+    url = "http://localhost/old/API/jupikd_discord/getguildinfo.php"
     params = {
         "key": config.jupsapikey,
         "serverid": guild.id,
@@ -36,7 +36,7 @@ async def GetGuildInfo(guild, table):
 
 #This function retrieves all the default commands and their permissions that are registered in the table.
 async def GetDefaultCommandPermissions():
-    url = "http://localhost/API/jupikd_discord/getdefaultcommandpermissions.php"
+    url = "http://localhost/old/API/jupikd_discord/getdefaultcommandpermissions.php"
     params = {
         "key": config.jupsapikey
     }
@@ -49,7 +49,7 @@ async def GetDefaultCommandPermissions():
 #This function retrieves the specified guild table information from the database. (non-async/requests lib)
 def GetGuildInfoNonAsync(guild, table):
     try:
-        url = "http://localhost/API/jupikd_discord/getguildinfo.php"
+        url = "http://localhost/old/API/jupikd_discord/getguildinfo.php"
         params = {
             "key": config.jupsapikey,
             "serverid": guild.id,
@@ -69,7 +69,7 @@ def GetGuildInfoNonAsync(guild, table):
 
 #This function checks and adds guilds in/to the database.
 async def CheckAndAddGuild(guild):
-    url = "http://localhost/API/jupikd_discord/addguildtodatabase.php"
+    url = "http://localhost/old/API/jupikd_discord/addguildtodatabase.php"
     params = {
         "key": config.jupsapikey,
         "serverid": guild.id,
@@ -103,7 +103,7 @@ async def CheckAndAddCommand(command):
     #Get rid of the last comma.
     aliases = aliases[:-2]
 
-    url = "http://localhost/API/jupikd_discord/addcommandtodatabase.php"
+    url = "http://localhost/old/API/jupikd_discord/addcommandtodatabase.php"
     params = {
         "key": config.jupsapikey,
         "name": command.name,
@@ -117,7 +117,7 @@ async def CheckAndAddCommand(command):
 
 #This function deletes the guild from the database.
 async def DeleteGuild(guild):
-    url = "http://localhost/API/jupikd_discord/removeguildfromdatabase.php"
+    url = "http://localhost/old/API/jupikd_discord/removeguildfromdatabase.php"
     params = {
         "key": config.jupsapikey,
         "serverid": guild.id
@@ -127,7 +127,7 @@ async def DeleteGuild(guild):
         print(f"ERROR DELETING GUILD => Guild ID: {guild.id} | Guild Name: {guild.name} | Guild Owner: {guild.owner.id} | json: {json}")
 
 async def DeleteGuildFromID(guild):
-    url = "http://localhost/API/jupikd_discord/removeguildfromdatabase.php"
+    url = "http://localhost/old/API/jupikd_discord/removeguildfromdatabase.php"
     params = {
         "key": config.jupsapikey,
         "serverid": guild
@@ -138,7 +138,7 @@ async def DeleteGuildFromID(guild):
 
 #This function will delete guilds not supposed to be in the database.
 async def DeleteAllRemovedGuilds(guilds):
-    url = "http://localhost/API/jupikd_discord/getallguildsindatabase.php"
+    url = "http://localhost/old/API/jupikd_discord/getallguildsindatabase.php"
     params = {
         "key": config.jupsapikey
     }
@@ -180,8 +180,8 @@ async def GetImageFromMessage(ctx, image):
     #If there isn't check if the member sent an image link.
     if len(ctx.message.attachments) > 0:
         if ctx.message.attachments[0].height != None and ctx.message.attachments[0].width != None:
-            await ctx.message.attachments[0].save(f"../../JupiKD_Discord_Python/images/{ctx.author.id}-{ctx.message.id}.png")
-            image = Image.open(f"../../JupiKD_Discord_Python/images/{ctx.author.id}-{ctx.message.id}.png")
+            await ctx.message.attachments[0].save(f"JupiKD_Discord_Python/images/{ctx.author.id}-{ctx.message.id}.png")
+            image = Image.open(f"JupiKD_Discord_Python/images/{ctx.author.id}-{ctx.message.id}.png")
         else:
             return False
     elif len(ctx.message.mentions) > 0:
@@ -191,8 +191,8 @@ async def GetImageFromMessage(ctx, image):
         #Check if the author wrote a ^ to get the last image as an attachment.
         if image == "^":
             image = await GetLastMessageWithImage(ctx)
-            await image.attachments[0].save(f"../../JupiKD_Discord_Python/images/{ctx.author.id}-{ctx.message.id}.png")
-            image = Image.open(f"../../JupiKD_Discord_Python/images/{ctx.author.id}-{ctx.message.id}.png")
+            await image.attachments[0].save(f"JupiKD_Discord_Python/images/{ctx.author.id}-{ctx.message.id}.png")
+            image = Image.open(f"JupiKD_Discord_Python/images/{ctx.author.id}-{ctx.message.id}.png")
             return image
 
         #Check if the message is for an emoji.
@@ -227,10 +227,10 @@ async def TemplateImageManipulate(ctx, image, width, height, x, y, path):
         return False
     
     #Crop the new image onto the template.
-    bottom_image = Image.open(f"../../JupiKD_Discord_Python/images/{path}.png")
+    bottom_image = Image.open(f"JupiKD_Discord_Python/images/{path}.png")
     image = image.resize((width, height))
     bottom_image.paste(image, (x, y))
-    bottom_image.save(f"../../JupiKD_Discord_Python/images/{ctx.author.id}-{ctx.message.id}.png")
+    bottom_image.save(f"JupiKD_Discord_Python/images/{ctx.author.id}-{ctx.message.id}.png")
 
     return True
 
@@ -302,7 +302,7 @@ async def GetMemberObjects(guild, column):
 
 #This function adds to the usage of a command in the database.
 async def AddUseToCommand(ctx):
-    url = "http://localhost/API/jupikd_discord/incrementusagedefaultcommands.php"
+    url = "http://localhost/old/API/jupikd_discord/incrementusagedefaultcommands.php"
     params = {
         "key": config.jupsapikey,
         "name": ctx.command.name
@@ -315,7 +315,7 @@ async def AddUseToCommand(ctx):
 
 #This function returns the song queue for a guild.
 async def GetSongQueue(guild):
-    url = "http://localhost/API/jupikd_discord/getsongqueue.php"
+    url = "http://localhost/old/API/jupikd_discord/getsongqueue.php"
     params = {
         "key": config.jupsapikey,
         "serverid": guild.id
@@ -482,7 +482,7 @@ async def MemberPermCommandCheck(ctx):
 #This function will check if a guild is premium.
 async def CheckGuildPremium(ctx):
     #Send a request to my API to see if the guild is premium.
-    url = "http://localhost/API/jupikd_discord/checkifguildpremium.php"
+    url = "http://localhost/old/API/jupikd_discord/checkifguildpremium.php"
     params = {
         "key": config.jupsapikey,
         "serverid": ctx.guild.id
@@ -612,6 +612,27 @@ async def OnMemberJoinCheck(member):
                     return join_message, join_leave_messages[0]["join_channel"]
         else:
             return None, None
+
+#This function is for converting total seconds to days/hours/minutes/seconds.
+async def TotalSecondsToDHMS(total_seconds):
+    total_minutes = total_seconds / 60
+    seconds = math.fmod(total_seconds, 60)
+    total_hours = total_minutes / 60
+    minutes = math.fmod(total_minutes, 60)
+    days = total_hours / 24
+    hours = math.fmod(total_hours, 24)
+
+    days = int(days)
+    hours = int(hours)
+    minutes = int(minutes)
+    seconds = int(seconds)
+
+    return_string = ""
+    return_string += f"{days} days, " if days > 1 or days < 1 and not days == 0 else f"{days} day, " if days == 1 else ""
+    return_string += f"{hours} hours, " if hours > 1 or hours < 1 and not hours == 0 else f"{hours} hour, " if hours == 1 else ""
+    return_string += f"{minutes} minutes, " if minutes > 1 or minutes < 1 and not minutes == 0 else f"{minutes} minute, " if minutes == 1 else ""
+    return_string += f"{seconds} seconds." if seconds > 1 or seconds < 1 and not seconds == 0 else f"{seconds} second." if seconds == 1 else ""
+    return return_string
 
 #This function is a central hub for post requests with aiohttp. (json response only)
 async def PostRequest(url, params):

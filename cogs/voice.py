@@ -36,7 +36,7 @@ class VoiceCommands:
     #This will deal with moving onto the next song or leaving when the queue is over.
     async def NextSong(self, ctx, last_song):
         #Delete the song that just played from the database if it's in it.
-        url = "http://localhost/API/jupikd_discord/deletesongfromqueue.php"
+        url = "http://localhost/old/API/jupikd_discord/deletesongfromqueue.php"
         params = {
             "key": config.jupsapikey,
             "serverid": ctx.guild.id,
@@ -84,7 +84,7 @@ class VoiceCommands:
         else:
             await ctx.send("Not connected to a voice channel.")
 
-        url = "http://localhost/API/jupikd_discord/deleteallsongsfromqueue.php"
+        url = "http://localhost/old/API/jupikd_discord/deleteallsongsfromqueue.php"
         params = {
             "key": config.jupsapikey,
             "serverid": ctx.guild.id
@@ -146,8 +146,13 @@ class VoiceCommands:
         }
         jsonURL = await functions.GetRequest(url, params)
 
-        #Check if there were no results, then return.
-        if jsonURL != None:
+        # Check if there were no results, then return.
+        if jsonURL:
+            # Check if there was an error when getting the results.
+            if "error" in jsonURL:
+                await ctx.send("There was an error while contacting the YouTube API. Contact Isaac to get it fixed.")
+                return
+
             if jsonURL["pageInfo"]["totalResults"] < 1:
                 await ctx.send(f"Couldn't find a song/video named: {song}.")
                 return
@@ -199,7 +204,7 @@ class VoiceCommands:
         #Check if the duration is 0 (livestream) or over 600 seconds (10 minutes).
         #If not, play the song normally.
         if song_info["duration"] > 0 and song_info["duration"] <= 601:
-            url = "http://localhost/API/jupikd_discord/addsongtoqueue.php"
+            url = "http://localhost/old/API/jupikd_discord/addsongtoqueue.php"
             params = {
                 "key": config.jupsapikey,
                 "serverid": ctx.guild.id,
